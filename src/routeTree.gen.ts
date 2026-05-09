@@ -10,13 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NosotrosRouteImport } from './routes/nosotros'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ContactoRouteImport } from './routes/contacto'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CatalogoIdRouteImport } from './routes/catalogo.$id'
 
 const NosotrosRoute = NosotrosRouteImport.update({
   id: '/nosotros',
   path: '/nosotros',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactoRoute = ContactoRouteImport.update({
@@ -29,43 +37,86 @@ const CatalogoRoute = CatalogoRouteImport.update({
   path: '/catalogo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CatalogoIdRoute = CatalogoIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CatalogoRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/catalogo': typeof CatalogoRoute
+  '/admin': typeof AdminRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/contacto': typeof ContactoRoute
+  '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
+  '/catalogo/$id': typeof CatalogoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/catalogo': typeof CatalogoRoute
+  '/admin': typeof AdminRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/contacto': typeof ContactoRoute
+  '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
+  '/catalogo/$id': typeof CatalogoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/catalogo': typeof CatalogoRoute
+  '/admin': typeof AdminRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/contacto': typeof ContactoRoute
+  '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
+  '/catalogo/$id': typeof CatalogoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/catalogo' | '/contacto' | '/nosotros'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/catalogo'
+    | '/contacto'
+    | '/login'
+    | '/nosotros'
+    | '/catalogo/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/catalogo' | '/contacto' | '/nosotros'
-  id: '__root__' | '/' | '/catalogo' | '/contacto' | '/nosotros'
+  to:
+    | '/'
+    | '/admin'
+    | '/catalogo'
+    | '/contacto'
+    | '/login'
+    | '/nosotros'
+    | '/catalogo/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/catalogo'
+    | '/contacto'
+    | '/login'
+    | '/nosotros'
+    | '/catalogo/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CatalogoRoute: typeof CatalogoRoute
+  AdminRoute: typeof AdminRoute
+  CatalogoRoute: typeof CatalogoRouteWithChildren
   ContactoRoute: typeof ContactoRoute
+  LoginRoute: typeof LoginRoute
   NosotrosRoute: typeof NosotrosRoute
 }
 
@@ -76,6 +127,13 @@ declare module '@tanstack/react-router' {
       path: '/nosotros'
       fullPath: '/nosotros'
       preLoaderRoute: typeof NosotrosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contacto': {
@@ -92,6 +150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CatalogoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -99,13 +164,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/catalogo/$id': {
+      id: '/catalogo/$id'
+      path: '/$id'
+      fullPath: '/catalogo/$id'
+      preLoaderRoute: typeof CatalogoIdRouteImport
+      parentRoute: typeof CatalogoRoute
+    }
   }
 }
 
+interface CatalogoRouteChildren {
+  CatalogoIdRoute: typeof CatalogoIdRoute
+}
+
+const CatalogoRouteChildren: CatalogoRouteChildren = {
+  CatalogoIdRoute: CatalogoIdRoute,
+}
+
+const CatalogoRouteWithChildren = CatalogoRoute._addFileChildren(
+  CatalogoRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CatalogoRoute: CatalogoRoute,
+  AdminRoute: AdminRoute,
+  CatalogoRoute: CatalogoRouteWithChildren,
   ContactoRoute: ContactoRoute,
+  LoginRoute: LoginRoute,
   NosotrosRoute: NosotrosRoute,
 }
 export const routeTree = rootRouteImport
