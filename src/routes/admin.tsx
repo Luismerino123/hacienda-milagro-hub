@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useEffect, useState } from "react";
-import { getSesion } from "@/lib/auth";
-import { Menu, X } from "lucide-react";
+import { useSesion } from "@/lib/auth";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/admin")({
@@ -12,15 +12,13 @@ export const Route = createFileRoute("/admin")({
 function AdminLayout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
+  const { session, loading } = useSesion();
 
   useEffect(() => {
-    const s = getSesion();
-    if (!s) navigate({ to: "/login" });
-    else setReady(true);
-  }, [navigate]);
+    if (!loading && !session) navigate({ to: "/login" });
+  }, [loading, session, navigate]);
 
-  if (!ready) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Cargando…</div>;
+  if (loading || !session) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Cargando…</div>;
 
   return (
     <div className="min-h-screen bg-background flex">
