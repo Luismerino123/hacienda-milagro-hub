@@ -14,7 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      animals: {
+        Row: {
+          birth_date: string
+          birth_weight_kg: number | null
+          breed: string
+          color: string | null
+          created_at: string
+          current_weight_kg: number | null
+          father_id: string | null
+          for_sale: boolean
+          id: string
+          location: string | null
+          mother_id: string | null
+          name: string | null
+          notes: string | null
+          photos: string[]
+          purpose: string | null
+          sale_price: number | null
+          sex: string
+          status: string
+          tag_number: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date: string
+          birth_weight_kg?: number | null
+          breed: string
+          color?: string | null
+          created_at?: string
+          current_weight_kg?: number | null
+          father_id?: string | null
+          for_sale?: boolean
+          id?: string
+          location?: string | null
+          mother_id?: string | null
+          name?: string | null
+          notes?: string | null
+          photos?: string[]
+          purpose?: string | null
+          sale_price?: number | null
+          sex: string
+          status?: string
+          tag_number: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string
+          birth_weight_kg?: number | null
+          breed?: string
+          color?: string | null
+          created_at?: string
+          current_weight_kg?: number | null
+          father_id?: string | null
+          for_sale?: boolean
+          id?: string
+          location?: string | null
+          mother_id?: string | null
+          name?: string | null
+          notes?: string | null
+          photos?: string[]
+          purpose?: string | null
+          sale_price?: number | null
+          sex?: string
+          status?: string
+          tag_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "animals_father_id_fkey"
+            columns: ["father_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animals_mother_id_fkey"
+            columns: ["mother_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
