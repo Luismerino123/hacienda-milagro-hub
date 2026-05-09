@@ -98,6 +98,47 @@ export type Database = {
           },
         ]
       }
+      milk_production: {
+        Row: {
+          animal_id: string
+          created_at: string
+          fecha: string
+          id: string
+          litros: number
+          notas: string | null
+          registrado_por: string | null
+          turno: string
+        }
+        Insert: {
+          animal_id: string
+          created_at?: string
+          fecha?: string
+          id?: string
+          litros: number
+          notas?: string | null
+          registrado_por?: string | null
+          turno: string
+        }
+        Update: {
+          animal_id?: string
+          created_at?: string
+          fecha?: string
+          id?: string
+          litros?: number
+          notas?: string | null
+          registrado_por?: string | null
+          turno?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_production_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
