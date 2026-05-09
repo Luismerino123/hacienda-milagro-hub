@@ -77,9 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Hacienda ganadera familiar — ganado, leche fresca y gestión moderna." },
       { name: "author", content: "Hacienda El Milagrito" },
       { property: "og:title", content: "Hacienda El Milagrito" },
-      { property: "og:description", content: "Tradición ganadera, leche fresca y ganado de calidad." },
+      { property: "og:description", content: "Hacienda ganadera familiar — ganado, leche fresca y gestión moderna." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Hacienda El Milagrito" },
+      { name: "twitter:description", content: "Hacienda ganadera familiar — ganado, leche fresca y gestión moderna." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1bc9dfcb-b6dc-4f6c-9226-70a6625db835/id-preview-7ad6c6e7--1c62b3bb-8d9a-406f-bb8e-1c864fa0695b.lovable.app-1778363093537.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1bc9dfcb-b6dc-4f6c-9226-70a6625db835/id-preview-7ad6c6e7--1c62b3bb-8d9a-406f-bb8e-1c864fa0695b.lovable.app-1778363093537.png" },
     ],
     links: [
       {
