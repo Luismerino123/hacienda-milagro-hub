@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/site/Logo";
-import { login } from "@/lib/auth";
+import { loginConSupabase } from "@/lib/auth";
 import { useState } from "react";
 import { toast } from "sonner";
 import hero from "@/assets/hero-ranch.jpg";
@@ -16,22 +16,20 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@milagrito.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("admin@elmilagrito.com");
+  const [password, setPassword] = useState("Milagrito2026!");
   const [loading, setLoading] = useState(false);
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      const s = login(email, password);
-      setLoading(false);
-      if (!s) {
-        toast.error("Credenciales incorrectas");
-      } else {
-        toast.success(`Bienvenido, ${s.nombre}`);
-        navigate({ to: "/admin" });
-      }
-    }, 400);
+    const r = await loginConSupabase(email, password);
+    setLoading(false);
+    if (!r.ok) {
+      toast.error("Credenciales incorrectas. Verifique e intente de nuevo.");
+    } else {
+      toast.success("Bienvenido a El Milagrito");
+      navigate({ to: "/admin" });
+    }
   }
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -63,11 +61,10 @@ function LoginPage() {
               {loading ? "Ingresando…" : "Ingresar"}
             </Button>
           </form>
-          <div className="mt-6 pt-4 border-t text-xs text-muted-foreground space-y-1">
-            <p className="font-semibold text-foreground">Cuentas de demostración:</p>
-            <p>admin@milagrito.com / admin123</p>
-            <p>ordeno@milagrito.com / ordeno123</p>
-            <p>contador@milagrito.com / contador123</p>
+          <div className="mt-6 pt-4 border-t text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">Cuenta de demostración:</p>
+            <p>admin@elmilagrito.com</p>
+            <p>Milagrito2026!</p>
           </div>
           <Link to="/" className="block text-center text-xs text-muted-foreground hover:text-primary mt-4">← Volver al sitio</Link>
         </Card>
