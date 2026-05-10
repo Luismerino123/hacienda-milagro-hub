@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Beef, Stethoscope, Milk, HeartPulse, Wallet, FileBarChart, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Beef, Stethoscope, Milk, HeartPulse, Wallet, FileBarChart, Settings, LogOut, Bell } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { logout, useSesion } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 const items = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, soon: false },
   { to: "/admin/ganado", label: "Ganado", icon: Beef, soon: false },
-  { to: "/admin/leche", label: "Producción", icon: Milk, soon: true },
-  { to: "/admin/salud", label: "Salud", icon: Stethoscope, soon: true },
-  { to: "/admin/reproduccion", label: "Reproducción", icon: HeartPulse, soon: true },
-  { to: "/admin/finanzas", label: "Ventas", icon: Wallet, soon: true },
+  { to: "/admin/leche", label: "Producción", icon: Milk, soon: false },
+  { to: "/admin/salud", label: "Salud", icon: Stethoscope, soon: false },
+  { to: "/admin/reproduccion", label: "Reproducción", icon: HeartPulse, soon: false },
+  { to: "/admin/finanzas", label: "Ventas", icon: Wallet, soon: false },
+  { to: "/admin/alertas", label: "Alertas", icon: Bell, soon: false },
   { to: "/admin/reportes", label: "Reportes", icon: FileBarChart, soon: true },
   { to: "/admin/configuracion", label: "Configuración", icon: Settings, soon: true },
 ];

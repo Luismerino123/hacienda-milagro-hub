@@ -123,7 +123,7 @@ begin
   select exists(select 1 from public.sales) into has_data;
   if has_data then return; end if;
 
-  -- Clientes
+  -- Clientes (insertar sin RETURNING porque son varios)
   insert into public.clients (nombre, telefono, email, direccion, notas)
   values
     ('Quesería La Esperanza', '+503 7777-1234', 'compras@laesperanza.sv',
@@ -131,9 +131,9 @@ begin
     ('Lácteos San Miguel', '+503 7654-9876', 'gerencia@sanmiguel.sv',
      'San Miguel', 'Compra leche fresca diaria. Pago semanal.'),
     ('Don Carlos Méndez', '+503 7012-3456', null,
-     'Comunidad El Roble', 'Cliente vecino, compra para consumo familiar.')
-  returning id into c1;
+     'Comunidad El Roble', 'Cliente vecino, compra para consumo familiar.');
 
+  -- Recuperar los IDs por nombre
   select id into c1 from public.clients where nombre = 'Quesería La Esperanza' limit 1;
   select id into c2 from public.clients where nombre = 'Lácteos San Miguel' limit 1;
   select id into c3 from public.clients where nombre = 'Don Carlos Méndez' limit 1;
