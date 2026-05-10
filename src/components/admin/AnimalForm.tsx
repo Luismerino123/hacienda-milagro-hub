@@ -119,7 +119,17 @@ export function AnimalForm({ existing }: { existing?: Animal }) {
       qc.invalidateQueries({ queryKey: ["animals"] });
       navigate({ to: "/admin/ganado/$id", params: { id: existing!.id } });
     } catch (e: any) {
-      toast.error(e.message?.includes("duplicate") ? "Ya existe un animal con ese arete" : "No se pudo guardar");
+      console.error("[AnimalForm] error guardando:", e);
+      const msg = String(e?.message ?? e ?? "");
+      if (msg.includes("duplicate") || msg.includes("unique")) {
+        toast.error("Ya existe un animal con ese arete");
+      } else if (msg.includes("row-level security") || msg.includes("RLS") || msg.includes("permission")) {
+        toast.error("Sin permisos. Verifique que está autenticado.");
+      } else if (msg.includes("violates check constraint")) {
+        toast.error("Algún valor no es válido (sexo, propósito o estado).");
+      } else {
+        toast.error(`No se pudo guardar: ${msg || "error desconocido"}`);
+      }
     } finally { setSaving(false); }
   }
 

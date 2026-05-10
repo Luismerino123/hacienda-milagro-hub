@@ -41,7 +41,7 @@ function Contacto() {
           <p className="text-muted-foreground">Estamos a la orden para ventas, visitas guiadas o pedidos de leche.</p>
           <div className="space-y-3 pt-4">
             <Card className="p-4 flex items-center gap-3"><Phone className="h-5 w-5 text-primary" /> +503 7000 0000</Card>
-            <Card className="p-4 flex items-center gap-3"><MapPin className="h-5 w-5 text-primary" /> Cantón El Milagrito, El Salvador</Card>
+            <Card className="p-4 flex items-center gap-3"><MapPin className="h-5 w-5 text-primary" /> Sonsonate, El Salvador</Card>
             <Button asChild variant="hero" size="lg" className="w-full sm:w-auto">
               <a href="https://wa.me/50370000000" target="_blank" rel="noreferrer"><MessageCircle className="h-5 w-5" /> Escribir por WhatsApp</a>
             </Button>

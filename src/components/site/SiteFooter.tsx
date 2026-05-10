@@ -14,7 +14,7 @@ export function SiteFooter() {
         <div className="space-y-2 text-sm">
           <h4 className="font-display text-lg mb-3">Contacto</h4>
           <p className="flex items-center gap-2"><Phone className="h-4 w-4" /> +503 7000 0000</p>
-          <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Cantón El Milagrito, El Salvador</p>
+          <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Sonsonate, El Salvador</p>
         </div>
         <div className="space-y-2 text-sm">
           <h4 className="font-display text-lg mb-3">Síguenos</h4>

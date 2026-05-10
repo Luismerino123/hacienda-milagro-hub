@@ -25,9 +25,9 @@ function Nosotros() {
         </div>
       </section>
       <section className="container mx-auto px-4 py-16 max-w-3xl space-y-6 text-foreground/85 leading-relaxed">
-        <p>Hacienda El Milagrito fue fundada en 1978 por Don Ramiro Hernández, con apenas 12 cabezas de ganado y un sueño grande: levantar una finca lechera que pudiera sostener a la familia y servir a la comunidad.</p>
-        <p>Hoy, tres generaciones después, contamos con cerca de 100 animales entre vacas lecheras, ganado de engorde y reproductores de razas Holstein, Jersey, Brahman y Pardo Suizo.</p>
-        <p>Creemos en lo simple bien hecho: pasto fresco, agua limpia, sombra, y mucho cariño. Ese es el secreto de la leche que ordeñamos todos los días al amanecer.</p>
+        <p>Hacienda El Milagrito fue fundada en 1978 por <strong>Don Luis de Jesús Merino Guardado</strong>, con un sueño grande: levantar una finca lechera en Sonsonate que pudiera sostener a la familia y servir a la comunidad.</p>
+        <p>Hoy contamos con cerca de 100 animales entre vacas lecheras, ganado de engorde y reproductores de razas Holstein, Jersey, Brahman y Pardo Suizo, manejados con dedicación y conocimiento heredado de generación en generación.</p>
+        <p>Creemos en lo simple bien hecho: pasto fresco, agua limpia, sombra, y mucho cariño. Ese es el secreto de la leche que ordeñamos todos los días al amanecer en las tierras sonsonatecas.</p>
         <h2 className="font-display text-3xl pt-6">Nuestros valores</h2>
         <ul className="space-y-2 list-disc pl-5">
           <li>Bienestar animal por encima de todo.</li>
