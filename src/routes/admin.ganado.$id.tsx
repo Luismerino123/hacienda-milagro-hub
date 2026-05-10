@@ -1,6 +1,8 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { obtenerAnimal, eliminarAnimal, calcularEdad, PHOTO_FALLBACK, listarAnimales } from "@/lib/animals";
+import { listarEventosDeAnimal, tipoColor, tipoLabel } from "@/lib/health";
+import { listarEventosReproDeAnimal, reproColor, reproLabel } from "@/lib/reproduction";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,8 @@ function Detalle() {
   const qc = useQueryClient();
   const { data: a, isLoading, error } = useQuery({ queryKey: ["animal", id], queryFn: () => obtenerAnimal(id) });
   const { data: todos } = useQuery({ queryKey: ["animals"], queryFn: listarAnimales });
+  const { data: eventos } = useQuery({ queryKey: ["health", "animal", id], queryFn: () => listarEventosDeAnimal(id) });
+  const { data: reproEventos } = useQuery({ queryKey: ["repro", "animal", id], queryFn: () => listarEventosReproDeAnimal(id) });
   const [foto, setFoto] = useState(0);
 
   if (error) throw error;
@@ -132,12 +136,97 @@ function Detalle() {
               </div>
             </TabsContent>
             <TabsContent value="timeline" className="pt-4 text-sm space-y-3">
+              {/* Eventos médicos y reproductivos en orden cronológico inverso */}
+              {[
+                ...(eventos ?? []).map((e) => ({
+                  id: e.id,
+                  fecha: e.fecha,
+                  txt: `${tipoLabel(e.tipo)}: ${e.titulo}${e.descripcion ? ` — ${e.descripcion}` : ""}`,
+                })),
+                ...(reproEventos ?? []).map((e) => ({
+                  id: e.id,
+                  fecha: e.fecha,
+                  txt: `${reproLabel(e.tipo)}${e.notas ? ` — ${e.notas}` : ""}`,
+                })),
+              ]
+                .sort((x, y) => y.fecha.localeCompare(x.fecha))
+                .map((ev) => (
+                  <Evento key={ev.id} fecha={ev.fecha} txt={ev.txt} />
+                ))}
               <Evento fecha={a.birth_date} txt={`Nacimiento de ${a.name ?? a.tag_number}`} />
-              <p className="text-muted-foreground text-xs italic pl-3">Próximamente: vacunas, partos, eventos veterinarios.</p>
+              {(eventos?.length ?? 0) === 0 && (reproEventos?.length ?? 0) === 0 && (
+                <p className="text-muted-foreground text-xs italic pl-3">
+                  Aún no hay eventos. Registralos desde Salud o Reproducción.
+                </p>
+              )}
             </TabsContent>
-            <TabsContent value="salud" className="pt-4 text-sm text-muted-foreground">Próximamente: historial de salud y veterinaria.</TabsContent>
+            <TabsContent value="salud" className="pt-4 space-y-3">
+              {!eventos ? (
+                <Skeleton className="h-32 w-full" />
+              ) : eventos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sin eventos médicos registrados para este animal.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {eventos.map((e) => (
+                    <div key={e.id} className="rounded-lg border p-3 text-sm">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span
+                          className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(e.tipo)}`}
+                        >
+                          {tipoLabel(e.tipo)}
+                        </span>
+                        <span className="font-medium">{e.titulo}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{e.fecha}</span>
+                      </div>
+                      {e.descripcion && (
+                        <p className="text-muted-foreground text-xs mb-1">{e.descripcion}</p>
+                      )}
+                      <div className="flex gap-3 flex-wrap text-xs text-muted-foreground">
+                        {e.medicamento && <span>💊 {e.medicamento}{e.dosis ? ` · ${e.dosis}` : ""}</span>}
+                        {e.veterinario && <span>👨‍⚕️ {e.veterinario}</span>}
+                        {e.proxima_fecha && <span>📅 Próxima: {e.proxima_fecha}</span>}
+                        {e.costo != null && <span>💵 ${Number(e.costo).toFixed(2)}</span>}
+                        {!e.resuelto && (
+                          <Badge variant="destructive" className="text-[10px]">En curso</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
             <TabsContent value="prod" className="pt-4 text-sm text-muted-foreground">Próximamente: registro de producción de leche.</TabsContent>
-            <TabsContent value="repro" className="pt-4 text-sm text-muted-foreground">Próximamente: ciclos reproductivos y partos.</TabsContent>
+            <TabsContent value="repro" className="pt-4 space-y-3">
+              {!reproEventos ? (
+                <Skeleton className="h-32 w-full" />
+              ) : reproEventos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sin eventos reproductivos registrados.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {reproEventos.map((e) => (
+                    <div key={e.id} className="rounded-lg border p-3 text-sm">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${reproColor(e.tipo)}`}>
+                          {reproLabel(e.tipo)}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-auto">{e.fecha}</span>
+                      </div>
+                      <div className="flex gap-3 flex-wrap text-xs text-muted-foreground">
+                        {e.toro && <span>♂ Toro: {e.toro.name ?? e.toro.tag_number}</span>}
+                        {e.ternero && <span>🐄 Ternero: {e.ternero.name ?? e.ternero.tag_number}</span>}
+                        {e.fecha_estimada_parto && <span>📅 Parto estimado: {e.fecha_estimada_parto}</span>}
+                        {e.veterinario && <span>👨‍⚕️ {e.veterinario}</span>}
+                      </div>
+                      {e.notas && <p className="text-muted-foreground text-xs mt-1">{e.notas}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
             <TabsContent value="fotos" className="pt-4">
               {a.photos.length === 0 ? <p className="text-sm text-muted-foreground">No hay fotos cargadas.</p> :
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

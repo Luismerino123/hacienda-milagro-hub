@@ -139,6 +139,276 @@ export type Database = {
           },
         ]
       }
+      health_events: {
+        Row: {
+          animal_id: string
+          costo: number | null
+          created_at: string
+          descripcion: string | null
+          dosis: string | null
+          fecha: string
+          id: string
+          medicamento: string | null
+          proxima_fecha: string | null
+          registrado_por: string | null
+          resuelto: boolean
+          tipo: string
+          titulo: string
+          updated_at: string
+          veterinario: string | null
+        }
+        Insert: {
+          animal_id: string
+          costo?: number | null
+          created_at?: string
+          descripcion?: string | null
+          dosis?: string | null
+          fecha?: string
+          id?: string
+          medicamento?: string | null
+          proxima_fecha?: string | null
+          registrado_por?: string | null
+          resuelto?: boolean
+          tipo: string
+          titulo: string
+          updated_at?: string
+          veterinario?: string | null
+        }
+        Update: {
+          animal_id?: string
+          costo?: number | null
+          created_at?: string
+          descripcion?: string | null
+          dosis?: string | null
+          fecha?: string
+          id?: string
+          medicamento?: string | null
+          proxima_fecha?: string | null
+          registrado_por?: string | null
+          resuelto?: boolean
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          veterinario?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string
+          direccion: string | null
+          email: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales: {
+        Row: {
+          animal_id: string | null
+          cantidad: number | null
+          client_id: string | null
+          created_at: string
+          descripcion: string | null
+          fecha: string
+          id: string
+          notas: string | null
+          precio_unitario: number | null
+          registrado_por: string | null
+          tipo: string
+          total: number
+          unidad: string | null
+          updated_at: string
+        }
+        Insert: {
+          animal_id?: string | null
+          cantidad?: number | null
+          client_id?: string | null
+          created_at?: string
+          descripcion?: string | null
+          fecha?: string
+          id?: string
+          notas?: string | null
+          precio_unitario?: number | null
+          registrado_por?: string | null
+          tipo: string
+          total: number
+          unidad?: string | null
+          updated_at?: string
+        }
+        Update: {
+          animal_id?: string | null
+          cantidad?: number | null
+          client_id?: string | null
+          created_at?: string
+          descripcion?: string | null
+          fecha?: string
+          id?: string
+          notas?: string | null
+          precio_unitario?: number | null
+          registrado_por?: string | null
+          tipo?: string
+          total?: number
+          unidad?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          categoria: string
+          created_at: string
+          descripcion: string
+          fecha: string
+          id: string
+          monto: number
+          notas: string | null
+          proveedor: string | null
+          registrado_por: string | null
+          updated_at: string
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          descripcion: string
+          fecha?: string
+          id?: string
+          monto: number
+          notas?: string | null
+          proveedor?: string | null
+          registrado_por?: string | null
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          descripcion?: string
+          fecha?: string
+          id?: string
+          monto?: number
+          notas?: string | null
+          proveedor?: string | null
+          registrado_por?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reproduction_events: {
+        Row: {
+          animal_id: string
+          costo: number | null
+          created_at: string
+          fecha: string
+          fecha_estimada_parto: string | null
+          id: string
+          notas: string | null
+          registrado_por: string | null
+          ternero_id: string | null
+          tipo: string
+          toro_id: string | null
+          updated_at: string
+          veterinario: string | null
+        }
+        Insert: {
+          animal_id: string
+          costo?: number | null
+          created_at?: string
+          fecha?: string
+          fecha_estimada_parto?: string | null
+          id?: string
+          notas?: string | null
+          registrado_por?: string | null
+          ternero_id?: string | null
+          tipo: string
+          toro_id?: string | null
+          updated_at?: string
+          veterinario?: string | null
+        }
+        Update: {
+          animal_id?: string
+          costo?: number | null
+          created_at?: string
+          fecha?: string
+          fecha_estimada_parto?: string | null
+          id?: string
+          notas?: string | null
+          registrado_por?: string | null
+          ternero_id?: string | null
+          tipo?: string
+          toro_id?: string | null
+          updated_at?: string
+          veterinario?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reproduction_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reproduction_events_toro_id_fkey"
+            columns: ["toro_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reproduction_events_ternero_id_fkey"
+            columns: ["ternero_id"]
+            isOneToOne: false
+            referencedRelation: "animals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
