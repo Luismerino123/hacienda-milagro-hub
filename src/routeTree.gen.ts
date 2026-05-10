@@ -25,8 +25,10 @@ import { Route as AdminGanadoRouteImport } from './routes/admin.ganado'
 import { Route as AdminFinanzasRouteImport } from './routes/admin.finanzas'
 import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
 import { Route as AdminAlertasRouteImport } from './routes/admin.alertas'
+import { Route as AdminGanadoIndexRouteImport } from './routes/admin.ganado.index'
 import { Route as AdminGanadoNuevoRouteImport } from './routes/admin.ganado.nuevo'
 import { Route as AdminGanadoIdRouteImport } from './routes/admin.ganado.$id'
+import { Route as AdminGanadoIdIndexRouteImport } from './routes/admin.ganado.$id.index'
 import { Route as AdminGanadoIdEditarRouteImport } from './routes/admin.ganado.$id.editar'
 
 const NosotrosRoute = NosotrosRouteImport.update({
@@ -109,6 +111,11 @@ const AdminAlertasRoute = AdminAlertasRouteImport.update({
   path: '/alertas',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGanadoIndexRoute = AdminGanadoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminGanadoRoute,
+} as any)
 const AdminGanadoNuevoRoute = AdminGanadoNuevoRouteImport.update({
   id: '/nuevo',
   path: '/nuevo',
@@ -118,6 +125,11 @@ const AdminGanadoIdRoute = AdminGanadoIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AdminGanadoRoute,
+} as any)
+const AdminGanadoIdIndexRoute = AdminGanadoIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminGanadoIdRoute,
 } as any)
 const AdminGanadoIdEditarRoute = AdminGanadoIdEditarRouteImport.update({
   id: '/editar',
@@ -144,7 +156,9 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/admin/ganado/$id': typeof AdminGanadoIdRouteWithChildren
   '/admin/ganado/nuevo': typeof AdminGanadoNuevoRoute
+  '/admin/ganado/': typeof AdminGanadoIndexRoute
   '/admin/ganado/$id/editar': typeof AdminGanadoIdEditarRoute
+  '/admin/ganado/$id/': typeof AdminGanadoIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -155,16 +169,16 @@ export interface FileRoutesByTo {
   '/admin/alertas': typeof AdminAlertasRoute
   '/admin/configuracion': typeof AdminConfiguracionRoute
   '/admin/finanzas': typeof AdminFinanzasRoute
-  '/admin/ganado': typeof AdminGanadoRouteWithChildren
   '/admin/leche': typeof AdminLecheRoute
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/reproduccion': typeof AdminReproduccionRoute
   '/admin/salud': typeof AdminSaludRoute
   '/catalogo/$id': typeof CatalogoIdRoute
   '/admin': typeof AdminIndexRoute
-  '/admin/ganado/$id': typeof AdminGanadoIdRouteWithChildren
   '/admin/ganado/nuevo': typeof AdminGanadoNuevoRoute
+  '/admin/ganado': typeof AdminGanadoIndexRoute
   '/admin/ganado/$id/editar': typeof AdminGanadoIdEditarRoute
+  '/admin/ganado/$id': typeof AdminGanadoIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -186,7 +200,9 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/admin/ganado/$id': typeof AdminGanadoIdRouteWithChildren
   '/admin/ganado/nuevo': typeof AdminGanadoNuevoRoute
+  '/admin/ganado/': typeof AdminGanadoIndexRoute
   '/admin/ganado/$id/editar': typeof AdminGanadoIdEditarRoute
+  '/admin/ganado/$id/': typeof AdminGanadoIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -209,7 +225,9 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/ganado/$id'
     | '/admin/ganado/nuevo'
+    | '/admin/ganado/'
     | '/admin/ganado/$id/editar'
+    | '/admin/ganado/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -220,16 +238,16 @@ export interface FileRouteTypes {
     | '/admin/alertas'
     | '/admin/configuracion'
     | '/admin/finanzas'
-    | '/admin/ganado'
     | '/admin/leche'
     | '/admin/reportes'
     | '/admin/reproduccion'
     | '/admin/salud'
     | '/catalogo/$id'
     | '/admin'
-    | '/admin/ganado/$id'
     | '/admin/ganado/nuevo'
+    | '/admin/ganado'
     | '/admin/ganado/$id/editar'
+    | '/admin/ganado/$id'
   id:
     | '__root__'
     | '/'
@@ -250,7 +268,9 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/ganado/$id'
     | '/admin/ganado/nuevo'
+    | '/admin/ganado/'
     | '/admin/ganado/$id/editar'
+    | '/admin/ganado/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -376,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAlertasRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ganado/': {
+      id: '/admin/ganado/'
+      path: '/'
+      fullPath: '/admin/ganado/'
+      preLoaderRoute: typeof AdminGanadoIndexRouteImport
+      parentRoute: typeof AdminGanadoRoute
+    }
     '/admin/ganado/nuevo': {
       id: '/admin/ganado/nuevo'
       path: '/nuevo'
@@ -390,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGanadoIdRouteImport
       parentRoute: typeof AdminGanadoRoute
     }
+    '/admin/ganado/$id/': {
+      id: '/admin/ganado/$id/'
+      path: '/'
+      fullPath: '/admin/ganado/$id/'
+      preLoaderRoute: typeof AdminGanadoIdIndexRouteImport
+      parentRoute: typeof AdminGanadoIdRoute
+    }
     '/admin/ganado/$id/editar': {
       id: '/admin/ganado/$id/editar'
       path: '/editar'
@@ -402,10 +436,12 @@ declare module '@tanstack/react-router' {
 
 interface AdminGanadoIdRouteChildren {
   AdminGanadoIdEditarRoute: typeof AdminGanadoIdEditarRoute
+  AdminGanadoIdIndexRoute: typeof AdminGanadoIdIndexRoute
 }
 
 const AdminGanadoIdRouteChildren: AdminGanadoIdRouteChildren = {
   AdminGanadoIdEditarRoute: AdminGanadoIdEditarRoute,
+  AdminGanadoIdIndexRoute: AdminGanadoIdIndexRoute,
 }
 
 const AdminGanadoIdRouteWithChildren = AdminGanadoIdRoute._addFileChildren(
@@ -415,11 +451,13 @@ const AdminGanadoIdRouteWithChildren = AdminGanadoIdRoute._addFileChildren(
 interface AdminGanadoRouteChildren {
   AdminGanadoIdRoute: typeof AdminGanadoIdRouteWithChildren
   AdminGanadoNuevoRoute: typeof AdminGanadoNuevoRoute
+  AdminGanadoIndexRoute: typeof AdminGanadoIndexRoute
 }
 
 const AdminGanadoRouteChildren: AdminGanadoRouteChildren = {
   AdminGanadoIdRoute: AdminGanadoIdRouteWithChildren,
   AdminGanadoNuevoRoute: AdminGanadoNuevoRoute,
+  AdminGanadoIndexRoute: AdminGanadoIndexRoute,
 }
 
 const AdminGanadoRouteWithChildren = AdminGanadoRoute._addFileChildren(
