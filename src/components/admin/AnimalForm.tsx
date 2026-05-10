@@ -79,9 +79,14 @@ export function AnimalForm({ existing }: { existing?: Animal }) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log("[AnimalForm] form values:", form);
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Revise los campos");
+      console.error("[AnimalForm] validation failed:", parsed.error.issues);
+      const issues = parsed.error.issues
+        .map((i) => `${i.path.join(".")} → ${i.message}`)
+        .join(" · ");
+      toast.error(issues || "Revise los campos del formulario");
       return;
     }
     const v = parsed.data;
@@ -104,31 +109,43 @@ export function AnimalForm({ existing }: { existing?: Animal }) {
       notes: v.notes || null,
       photos,
     };
+    console.log("[AnimalForm] payload to save:", payload);
     setSaving(true);
     try {
       if (existing) {
-        await actualizarAnimal(existing.id, payload);
+        const updated = await actualizarAnimal(existing.id, payload);
+        console.log("[AnimalForm] updated:", updated);
         toast.success("Animal actualizado");
+        qc.invalidateQueries({ queryKey: ["animals"] });
+        qc.invalidateQueries({ queryKey: ["animal", existing.id] });
+        navigate({ to: "/admin/ganado/$id", params: { id: existing.id } });
       } else {
         const a = await crearAnimal(payload);
+        console.log("[AnimalForm] created:", a);
         toast.success("Animal registrado");
         qc.invalidateQueries({ queryKey: ["animals"] });
         navigate({ to: "/admin/ganado/$id", params: { id: a.id } });
-        return;
       }
-      qc.invalidateQueries({ queryKey: ["animals"] });
-      navigate({ to: "/admin/ganado/$id", params: { id: existing!.id } });
     } catch (e: any) {
       console.error("[AnimalForm] error guardando:", e);
       const msg = String(e?.message ?? e ?? "");
-      if (msg.includes("duplicate") || msg.includes("unique")) {
-        toast.error("Ya existe un animal con ese arete");
-      } else if (msg.includes("row-level security") || msg.includes("RLS") || msg.includes("permission")) {
-        toast.error("Sin permisos. Verifique que está autenticado.");
-      } else if (msg.includes("violates check constraint")) {
-        toast.error("Algún valor no es válido (sexo, propósito o estado).");
+      const code = e?.code ?? "";
+      const details = e?.details ?? "";
+      const hint = e?.hint ?? "";
+      const fullMsg = [msg, details, hint].filter(Boolean).join(" — ");
+
+      if (msg.includes("duplicate") || msg.includes("unique") || code === "23505") {
+        toast.error("Ya existe un animal con ese arete. Cambie el número y reintente.");
+      } else if (msg.includes("row-level security") || msg.includes("RLS") || code === "42501") {
+        toast.error("Sin permisos. ¿Tu sesión expiró? Cerrá sesión y volvé a entrar.");
+      } else if (msg.includes("violates check constraint") || code === "23514") {
+        toast.error(`Valor no permitido: ${details || msg}`);
+      } else if (msg.includes("foreign key") || code === "23503") {
+        toast.error("Madre o padre seleccionado no existe. Reintente.");
+      } else if (msg.includes("not-null") || code === "23502") {
+        toast.error(`Falta un campo obligatorio: ${details || msg}`);
       } else {
-        toast.error(`No se pudo guardar: ${msg || "error desconocido"}`);
+        toast.error(`No se pudo guardar: ${fullMsg || "error desconocido (mira la consola)"}`);
       }
     } finally { setSaving(false); }
   }

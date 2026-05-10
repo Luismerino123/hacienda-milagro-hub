@@ -339,6 +339,60 @@ export type Database = {
         }
         Relationships: []
       }
+      hacienda_settings: {
+        Row: {
+          ano_fundacion: number | null
+          descripcion: string | null
+          direccion: string | null
+          email: string | null
+          facebook_url: string | null
+          fundador: string | null
+          id: number
+          instagram_url: string | null
+          moneda: string | null
+          nombre: string
+          precio_leche_default: number | null
+          subtitulo: string | null
+          telefono: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          ano_fundacion?: number | null
+          descripcion?: string | null
+          direccion?: string | null
+          email?: string | null
+          facebook_url?: string | null
+          fundador?: string | null
+          id?: number
+          instagram_url?: string | null
+          moneda?: string | null
+          nombre?: string
+          precio_leche_default?: number | null
+          subtitulo?: string | null
+          telefono?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          ano_fundacion?: number | null
+          descripcion?: string | null
+          direccion?: string | null
+          email?: string | null
+          facebook_url?: string | null
+          fundador?: string | null
+          id?: number
+          instagram_url?: string | null
+          moneda?: string | null
+          nombre?: string
+          precio_leche_default?: number | null
+          subtitulo?: string | null
+          telefono?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       reproduction_events: {
         Row: {
           animal_id: string

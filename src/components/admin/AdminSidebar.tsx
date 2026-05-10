@@ -12,8 +12,8 @@ const items = [
   { to: "/admin/reproduccion", label: "Reproducción", icon: HeartPulse, soon: false },
   { to: "/admin/finanzas", label: "Ventas", icon: Wallet, soon: false },
   { to: "/admin/alertas", label: "Alertas", icon: Bell, soon: false },
-  { to: "/admin/reportes", label: "Reportes", icon: FileBarChart, soon: true },
-  { to: "/admin/configuracion", label: "Configuración", icon: Settings, soon: true },
+  { to: "/admin/reportes", label: "Reportes", icon: FileBarChart, soon: false },
+  { to: "/admin/configuracion", label: "Configuración", icon: Settings, soon: false },
 ];
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
