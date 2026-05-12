@@ -32,6 +32,8 @@ import {
   Syringe,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { usePaginated } from "@/lib/usePagination";
+import { Pager } from "@/components/ui/pager";
 import { toast } from "sonner";
 import { listarAnimales } from "@/lib/animals";
 import {
@@ -147,6 +149,8 @@ function Salud() {
     inicioMes.setDate(1);
     return (recientesQ.data ?? []).filter((e) => new Date(e.fecha) >= inicioMes).length;
   }, [recientesQ.data]);
+
+  const historialPaged = usePaginated(recientesQ.data ?? []);
 
   const requiereProxima = tipo === "vacuna" || tipo === "desparasitacion";
   const requiereResuelto = tipo === "enfermedad" || tipo === "tratamiento" || tipo === "lesion";
@@ -481,41 +485,44 @@ function Salud() {
                   text="Comience registrando una vacuna o visita del veterinario."
                 />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Animal</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Detalle</TableHead>
-                      <TableHead className="text-right">Costo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(recientesQ.data ?? []).map((e) => (
-                      <TableRow key={e.id}>
-                        <TableCell>{e.fecha}</TableCell>
-                        <TableCell className="font-medium">
-                          {e.animals?.name ?? "—"}{" "}
-                          <span className="text-muted-foreground text-xs">
-                            ({e.animals?.tag_number})
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(e.tipo)}`}
-                          >
-                            {tipoLabel(e.tipo)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">{e.titulo}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {e.costo != null ? `$${Number(e.costo).toFixed(2)}` : "—"}
-                        </TableCell>
+                <div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Animal</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Detalle</TableHead>
+                        <TableHead className="text-right">Costo</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {historialPaged.items.map((e) => (
+                        <TableRow key={e.id}>
+                          <TableCell>{e.fecha}</TableCell>
+                          <TableCell className="font-medium">
+                            {e.animals?.name ?? "—"}{" "}
+                            <span className="text-muted-foreground text-xs">
+                              ({e.animals?.tag_number})
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(e.tipo)}`}
+                            >
+                              {tipoLabel(e.tipo)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">{e.titulo}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {e.costo != null ? `$${Number(e.costo).toFixed(2)}` : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <Pager page={historialPaged.page} total={historialPaged.totalPages} onChange={historialPaged.setPage} />
+                </div>
               )}
             </TabsContent>
           </Tabs>

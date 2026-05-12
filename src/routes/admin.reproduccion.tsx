@@ -25,6 +25,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Baby, CalendarHeart, HeartHandshake, Heart, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
+import { usePaginated } from "@/lib/usePagination";
+import { Pager } from "@/components/ui/pager";
 import { toast } from "sonner";
 import { listarAnimales } from "@/lib/animals";
 import {
@@ -48,6 +50,7 @@ function Reproduccion() {
     queryFn: () => listarEventosReproRecientes(50),
   });
   const prenadasQ = useQuery({ queryKey: ["repro", "pregnant"], queryFn: listarPrenadas });
+  const historialPaged = usePaginated(recientesQ.data ?? []);
 
   const animales = animalesQ.data ?? [];
   const hembras = useMemo(
@@ -311,36 +314,39 @@ function Reproduccion() {
                   text="Comience registrando un celo, monta o inseminación."
                 />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Hembra</TableHead>
-                      <TableHead>Evento</TableHead>
-                      <TableHead>Toro / Ternero</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(recientesQ.data ?? []).map((e) => (
-                      <TableRow key={e.id}>
-                        <TableCell>{e.fecha}</TableCell>
-                        <TableCell className="font-medium">
-                          {e.animals?.name ?? "—"}{" "}
-                          <span className="text-muted-foreground text-xs">({e.animals?.tag_number})</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${reproColor(e.tipo)}`}>
-                            {reproLabel(e.tipo)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {e.toro && <div>♂ {e.toro.name ?? e.toro.tag_number}</div>}
-                          {e.ternero && <div>🐄 {e.ternero.name ?? e.ternero.tag_number}</div>}
-                        </TableCell>
+                <div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Hembra</TableHead>
+                        <TableHead>Evento</TableHead>
+                        <TableHead>Toro / Ternero</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {historialPaged.items.map((e) => (
+                        <TableRow key={e.id}>
+                          <TableCell>{e.fecha}</TableCell>
+                          <TableCell className="font-medium">
+                            {e.animals?.name ?? "—"}{" "}
+                            <span className="text-muted-foreground text-xs">({e.animals?.tag_number})</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${reproColor(e.tipo)}`}>
+                              {reproLabel(e.tipo)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {e.toro && <div>♂ {e.toro.name ?? e.toro.tag_number}</div>}
+                            {e.ternero && <div>🐄 {e.ternero.name ?? e.ternero.tag_number}</div>}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <Pager page={historialPaged.page} total={historialPaged.totalPages} onChange={historialPaged.setPage} />
+                </div>
               )}
             </TabsContent>
           </Tabs>

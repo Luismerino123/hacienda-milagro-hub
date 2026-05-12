@@ -41,6 +41,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { usePaginated } from "@/lib/usePagination";
+import { Pager } from "@/components/ui/pager";
 import { toast } from "sonner";
 import { listarAnimales } from "@/lib/animals";
 import {
@@ -64,6 +66,10 @@ function Finanzas() {
   const clientesQ = useQuery({ queryKey: ["clients"], queryFn: listarClientes });
   const animalesQ = useQuery({ queryKey: ["animals"], queryFn: listarAnimales });
   const resumenQ = useQuery({ queryKey: ["finance", "summary", 6], queryFn: () => resumenMensual(6) });
+
+  const ventasPaged = usePaginated(ventasQ.data ?? []);
+  const egresosPaged = usePaginated(egresosQ.data ?? []);
+  const clientesPaged = usePaginated(clientesQ.data ?? []);
 
   // KPIs (mes actual)
   const mesActual = new Date().toISOString().slice(0, 7);
@@ -141,36 +147,39 @@ function Finanzas() {
             ) : ventasQ.data?.length === 0 ? (
               <EmptyState text="Aún no se han registrado ventas." />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Cliente / Detalle</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(ventasQ.data ?? []).map((v) => (
-                    <TableRow key={v.id}>
-                      <TableCell>{v.fecha}</TableCell>
-                      <TableCell><Badge variant="secondary" className="capitalize">{v.tipo}</Badge></TableCell>
-                      <TableCell>
-                        <div className="font-medium">{v.clients?.nombre ?? "—"}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {v.animals && `${v.animals.name} (${v.animals.tag_number})`}
-                          {v.descripcion && !v.animals && v.descripcion}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {v.cantidad ? `${v.cantidad} ${v.unidad ?? ""}` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">${Number(v.total).toFixed(2)}</TableCell>
+              <div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Cliente / Detalle</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {ventasPaged.items.map((v) => (
+                      <TableRow key={v.id}>
+                        <TableCell>{v.fecha}</TableCell>
+                        <TableCell><Badge variant="secondary" className="capitalize">{v.tipo}</Badge></TableCell>
+                        <TableCell>
+                          <div className="font-medium">{v.clients?.nombre ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {v.animals && `${v.animals.name} (${v.animals.tag_number})`}
+                            {v.descripcion && !v.animals && v.descripcion}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {v.cantidad ? `${v.cantidad} ${v.unidad ?? ""}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">${Number(v.total).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pager page={ventasPaged.page} total={ventasPaged.totalPages} onChange={ventasPaged.setPage} />
+              </div>
             )}
           </Card>
         </TabsContent>
@@ -186,30 +195,33 @@ function Finanzas() {
             ) : egresosQ.data?.length === 0 ? (
               <EmptyState text="Aún no se han registrado egresos." />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Proveedor</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(egresosQ.data ?? []).map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell>{e.fecha}</TableCell>
-                      <TableCell><Badge variant="secondary">{categoriaLabel(e.categoria)}</Badge></TableCell>
-                      <TableCell className="max-w-xs">{e.descripcion}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{e.proveedor ?? "—"}</TableCell>
-                      <TableCell className="text-right font-semibold text-destructive">
-                        -${Number(e.monto).toFixed(2)}
-                      </TableCell>
+              <div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead>Proveedor</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {egresosPaged.items.map((e) => (
+                      <TableRow key={e.id}>
+                        <TableCell>{e.fecha}</TableCell>
+                        <TableCell><Badge variant="secondary">{categoriaLabel(e.categoria)}</Badge></TableCell>
+                        <TableCell className="max-w-xs">{e.descripcion}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{e.proveedor ?? "—"}</TableCell>
+                        <TableCell className="text-right font-semibold text-destructive">
+                          -${Number(e.monto).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pager page={egresosPaged.page} total={egresosPaged.totalPages} onChange={egresosPaged.setPage} />
+              </div>
             )}
           </Card>
         </TabsContent>
@@ -227,26 +239,29 @@ function Finanzas() {
             ) : clientesQ.data?.length === 0 ? (
               <EmptyState text="Aún no hay clientes registrados." />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Dirección</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(clientesQ.data ?? []).map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.nombre}</TableCell>
-                      <TableCell>{c.telefono ?? "—"}</TableCell>
-                      <TableCell>{c.email ?? "—"}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{c.direccion ?? "—"}</TableCell>
+              <div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Teléfono</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Dirección</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {clientesPaged.items.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.nombre}</TableCell>
+                        <TableCell>{c.telefono ?? "—"}</TableCell>
+                        <TableCell>{c.email ?? "—"}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{c.direccion ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pager page={clientesPaged.page} total={clientesPaged.totalPages} onChange={clientesPaged.setPage} />
+              </div>
             )}
           </Card>
         </TabsContent>

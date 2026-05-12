@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useMemo, useState } from "react";
+import { usePaginated } from "@/lib/usePagination";
+import { Pager } from "@/components/ui/pager";
 import { toast } from "sonner";
 import { Milk } from "lucide-react";
 import { listarAnimales } from "@/lib/animals";
@@ -32,6 +34,8 @@ function Leche() {
   const [turno, setTurno] = useState<"mañana" | "tarde">("mañana");
   const [litros, setLitros] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const recientesPaged = usePaginated(recientesQ.data ?? []);
 
   const trend = useMemo(() => agruparPorDia((trendQ.data ?? []) as { fecha: string; litros: number }[]), [trendQ.data]);
   const totalHoy = useMemo(() => {
@@ -151,31 +155,34 @@ function Leche() {
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Vaca</TableHead>
-                <TableHead>Turno</TableHead>
-                <TableHead className="text-right">Litros</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(recientesQ.data ?? []).map(r => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.fecha}</TableCell>
-                  <TableCell className="font-medium">
-                    {r.animals?.name ?? "—"} <span className="text-muted-foreground text-xs">({r.animals?.tag_number})</span>
-                  </TableCell>
-                  <TableCell><Badge variant="secondary" className="capitalize">{r.turno}</Badge></TableCell>
-                  <TableCell className="text-right font-semibold">{Number(r.litros).toFixed(1)} L</TableCell>
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Vaca</TableHead>
+                  <TableHead>Turno</TableHead>
+                  <TableHead className="text-right">Litros</TableHead>
                 </TableRow>
-              ))}
-              {recientesQ.data?.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sin registros aún.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {recientesPaged.items.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell>{r.fecha}</TableCell>
+                    <TableCell className="font-medium">
+                      {r.animals?.name ?? "—"} <span className="text-muted-foreground text-xs">({r.animals?.tag_number})</span>
+                    </TableCell>
+                    <TableCell><Badge variant="secondary" className="capitalize">{r.turno}</Badge></TableCell>
+                    <TableCell className="text-right font-semibold">{Number(r.litros).toFixed(1)} L</TableCell>
+                  </TableRow>
+                ))}
+                {recientesQ.data?.length === 0 && (
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sin registros aún.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <Pager page={recientesPaged.page} total={recientesPaged.totalPages} onChange={recientesPaged.setPage} />
+          </div>
         )}
       </Card>
     </div>
