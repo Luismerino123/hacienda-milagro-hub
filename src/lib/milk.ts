@@ -4,13 +4,12 @@ import type { Database } from "@/integrations/supabase/types";
 export type MilkRow = Database["public"]["Tables"]["milk_production"]["Row"];
 export type MilkInsert = Database["public"]["Tables"]["milk_production"]["Insert"];
 
-export async function listarOrdenosRecientes(limit = 50) {
+export async function listarOrdenosRecientes() {
   const { data, error } = await supabase
     .from("milk_production")
     .select("*, animals(name, tag_number)")
     .order("fecha", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }

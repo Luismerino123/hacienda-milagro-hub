@@ -26,13 +26,12 @@ export function tipoColor(tipo: string): string {
 }
 
 /** Lista los eventos médicos más recientes (con info del animal). */
-export async function listarEventosRecientes(limit = 50) {
+export async function listarEventosRecientes() {
   const { data, error } = await supabase
     .from("health_events")
     .select("*, animals(name, tag_number)")
     .order("fecha", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }

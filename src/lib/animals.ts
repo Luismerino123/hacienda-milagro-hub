@@ -67,9 +67,16 @@ export async function eliminarAnimal(id: string) {
   if (error) throw error;
 }
 
+function uuid(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
 export async function subirFoto(file: File): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `${crypto.randomUUID()}.${ext}`;
+  const path = `${uuid()}.${ext}`;
   const { error } = await supabase.storage.from("animal-photos").upload(path, file, {
     cacheControl: "3600", upsert: false,
   });

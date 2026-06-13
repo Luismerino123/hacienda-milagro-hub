@@ -20,8 +20,11 @@ import {
   tipoLabel,
 } from "@/lib/health";
 import { listarPrenadas, reproColor, reproLabel } from "@/lib/reproduction";
+import { useMemo } from "react";
+import { formatFecha } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/alertas")({ component: Alertas });
+
 
 function Alertas() {
   const vacunasQ = useQuery({
@@ -37,20 +40,42 @@ function Alertas() {
     queryFn: listarPrenadas,
   });
 
-  // Cálculos
-  const atrasadas = (vacunasQ.data ?? []).filter((v) => diasDesdeHoy(v.proxima_fecha!) < 0);
-  const enSemana = (vacunasQ.data ?? []).filter(
-    (v) => diasDesdeHoy(v.proxima_fecha!) >= 0 && diasDesdeHoy(v.proxima_fecha!) <= 7,
+  const vacunas = useMemo(() => vacunasQ.data ?? [], [vacunasQ.data]);
+  const tratamientos = useMemo(() => tratamientosQ.data ?? [], [tratamientosQ.data]);
+  const prenadas = useMemo(() => prenadasQ.data ?? [], [prenadasQ.data]);
+
+  const atrasadas = useMemo(
+    () => vacunas.filter((v) => v.proxima_fecha && diasDesdeHoy(v.proxima_fecha) < 0),
+    [vacunas],
   );
-  const proximas = (vacunasQ.data ?? []).filter((v) => diasDesdeHoy(v.proxima_fecha!) > 7);
-  const partosInminentes = (prenadasQ.data ?? []).filter(
-    (p) => diasDesdeHoy(p.fecha_estimada_parto!) <= 14 && diasDesdeHoy(p.fecha_estimada_parto!) >= -7,
+  const enSemana = useMemo(
+    () =>
+      vacunas.filter((v) => {
+        if (!v.proxima_fecha) return false;
+        const d = diasDesdeHoy(v.proxima_fecha);
+        return d >= 0 && d <= 7;
+      }),
+    [vacunas],
+  );
+  const proximasNoUrgentes = useMemo(
+    () => vacunas.filter((v) => v.proxima_fecha && diasDesdeHoy(v.proxima_fecha) > 7),
+    [vacunas],
+  );
+  const partosInminentes = useMemo(
+    () =>
+      prenadas.filter((p) => {
+        if (!p.fecha_estimada_parto) return false;
+        const d = diasDesdeHoy(p.fecha_estimada_parto);
+        return d <= 14 && d >= -7;
+      }),
+    [prenadas],
   );
 
   const totalAlertas =
-    atrasadas.length + enSemana.length + (tratamientosQ.data?.length ?? 0) + partosInminentes.length;
+    atrasadas.length + enSemana.length + tratamientos.length + partosInminentes.length;
 
   const loading = vacunasQ.isLoading || tratamientosQ.isLoading || prenadasQ.isLoading;
+  const hasError = vacunasQ.isError || tratamientosQ.isError || prenadasQ.isError;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -66,6 +91,12 @@ function Alertas() {
 
       {loading ? (
         <Skeleton className="h-32 w-full" />
+      ) : hasError ? (
+        <Card className="p-8 text-center shadow-soft">
+          <p className="text-sm text-destructive">
+            Error al cargar las alertas. Recarga la página.
+          </p>
+        </Card>
       ) : totalAlertas === 0 ? (
         <Card className="p-12 text-center shadow-soft">
           <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
@@ -91,8 +122,18 @@ function Alertas() {
                     key={v.id}
                     titulo={v.titulo}
                     subtitulo={`${v.animals?.name ?? "—"} (${v.animals?.tag_number})`}
-                    chip={<span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(v.tipo)}`}>{tipoLabel(v.tipo)}</span>}
-                    badge={<Badge variant="destructive">Atrasada {Math.abs(diasDesdeHoy(v.proxima_fecha!))}d</Badge>}
+                    chip={
+                      <span
+                        className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(v.tipo)}`}
+                      >
+                        {tipoLabel(v.tipo)}
+                      </span>
+                    }
+                    badge={
+                      <Badge variant="destructive">
+                        Atrasada {Math.abs(diasDesdeHoy(v.proxima_fecha ?? ""))}d
+                      </Badge>
+                    }
                   />
                 ))}
               </ul>
@@ -108,13 +149,19 @@ function Alertas() {
               </h2>
               <ul className="space-y-2">
                 {enSemana.map((v) => {
-                  const d = diasDesdeHoy(v.proxima_fecha!);
+                  const d = diasDesdeHoy(v.proxima_fecha ?? "");
                   return (
                     <AlertRow
                       key={v.id}
                       titulo={v.titulo}
                       subtitulo={`${v.animals?.name ?? "—"} (${v.animals?.tag_number})`}
-                      chip={<span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(v.tipo)}`}>{tipoLabel(v.tipo)}</span>}
+                      chip={
+                        <span
+                          className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(v.tipo)}`}
+                        >
+                          {tipoLabel(v.tipo)}
+                        </span>
+                      }
                       badge={<Badge>{d === 0 ? "Hoy" : `En ${d}d`}</Badge>}
                     />
                   );
@@ -124,24 +171,33 @@ function Alertas() {
           )}
 
           {/* Tratamientos activos */}
-          {(tratamientosQ.data?.length ?? 0) > 0 && (
+          {tratamientos.length > 0 && (
             <Card className="p-5 shadow-soft">
               <h2 className="font-display text-xl mb-3 flex items-center gap-2">
                 <Stethoscope className="h-5 w-5 text-primary" />
-                Tratamientos en curso ({tratamientosQ.data!.length})
+                Tratamientos en curso ({tratamientos.length})
               </h2>
               <ul className="space-y-2">
-                {(tratamientosQ.data ?? []).map((t) => (
+                {tratamientos.map((t) => (
                   <AlertRow
                     key={t.id}
                     titulo={t.titulo}
-                    subtitulo={`${t.animals?.name ?? "—"} (${t.animals?.tag_number}) · iniciado ${t.fecha}`}
-                    chip={<span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(t.tipo)}`}>{tipoLabel(t.tipo)}</span>}
+                    subtitulo={`${t.animals?.name ?? "—"} (${t.animals?.tag_number}) · iniciado ${formatFecha(t.fecha)}`}
+                    chip={
+                      <span
+                        className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(t.tipo)}`}
+                      >
+                        {tipoLabel(t.tipo)}
+                      </span>
+                    }
                     badge={<Badge variant="secondary">En curso</Badge>}
                   />
                 ))}
               </ul>
-              <Link to="/admin/salud" className="text-sm text-primary hover:underline mt-3 inline-block">
+              <Link
+                to="/admin/salud"
+                className="text-sm text-primary hover:underline mt-3 inline-block"
+              >
                 Ir al módulo de salud →
               </Link>
             </Card>
@@ -156,43 +212,66 @@ function Alertas() {
               </h2>
               <ul className="space-y-2">
                 {partosInminentes.map((p) => {
-                  const d = diasDesdeHoy(p.fecha_estimada_parto!);
+                  const d = p.fecha_estimada_parto ? diasDesdeHoy(p.fecha_estimada_parto) : null;
                   return (
                     <AlertRow
                       key={p.id}
-                      titulo={`Parto estimado: ${p.fecha_estimada_parto}`}
+                      titulo={`Parto estimado: ${formatFecha(p.fecha_estimada_parto)}`}
                       subtitulo={`${p.animals?.name ?? "—"} (${p.animals?.tag_number})`}
-                      chip={<span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${reproColor(p.tipo)}`}>{reproLabel(p.tipo)}</span>}
+                      chip={
+                        <span
+                          className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${reproColor(p.tipo)}`}
+                        >
+                          {reproLabel(p.tipo)}
+                        </span>
+                      }
                       badge={
-                        <Badge variant={d < 0 ? "destructive" : "default"}>
-                          {d < 0 ? `${Math.abs(d)}d atrás` : d === 0 ? "Hoy" : `En ${d}d`}
-                        </Badge>
+                        d === null ? (
+                          <Badge variant="secondary">—</Badge>
+                        ) : (
+                          <Badge variant={d < 0 ? "destructive" : "default"}>
+                            {d < 0 ? `${Math.abs(d)}d atrás` : d === 0 ? "Hoy" : `En ${d}d`}
+                          </Badge>
+                        )
                       }
                     />
                   );
                 })}
               </ul>
-              <Link to="/admin/reproduccion" className="text-sm text-primary hover:underline mt-3 inline-block">
+              <Link
+                to="/admin/reproduccion"
+                className="text-sm text-primary hover:underline mt-3 inline-block"
+              >
                 Ir al módulo de reproducción →
               </Link>
             </Card>
           )}
 
           {/* Próximas (no urgentes) */}
-          {proximas.length > 0 && (
+          {proximasNoUrgentes.length > 0 && (
             <Card className="p-5 shadow-soft">
               <h2 className="font-display text-xl mb-3 flex items-center gap-2 text-muted-foreground">
                 <CalendarHeart className="h-5 w-5" />
                 Próximas (8-60 días)
               </h2>
               <ul className="space-y-2">
-                {proximas.map((v) => (
+                {proximasNoUrgentes.map((v) => (
                   <AlertRow
                     key={v.id}
                     titulo={v.titulo}
-                    subtitulo={`${v.animals?.name ?? "—"} (${v.animals?.tag_number}) · ${v.proxima_fecha}`}
-                    chip={<span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(v.tipo)}`}>{tipoLabel(v.tipo)}</span>}
-                    badge={<Badge variant="secondary">En {diasDesdeHoy(v.proxima_fecha!)}d</Badge>}
+                    subtitulo={`${v.animals?.name ?? "—"} (${v.animals?.tag_number}) · ${formatFecha(v.proxima_fecha)}`}
+                    chip={
+                      <span
+                        className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(v.tipo)}`}
+                      >
+                        {tipoLabel(v.tipo)}
+                      </span>
+                    }
+                    badge={
+                      <Badge variant="secondary">
+                        En {diasDesdeHoy(v.proxima_fecha ?? "")}d
+                      </Badge>
+                    }
                   />
                 ))}
               </ul>

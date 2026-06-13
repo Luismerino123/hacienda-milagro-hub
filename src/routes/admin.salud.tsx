@@ -36,6 +36,7 @@ import { usePaginated } from "@/lib/usePagination";
 import { Pager } from "@/components/ui/pager";
 import { toast } from "sonner";
 import { listarAnimales } from "@/lib/animals";
+import { formatFecha, getMesesRecientes } from "@/lib/utils";
 import {
   TIPOS_EVENTO,
   crearEvento,
@@ -50,12 +51,20 @@ import {
 
 export const Route = createFileRoute("/admin/salud")({ component: Salud });
 
+function TipoBadge({ tipo }: { tipo: string }) {
+  return (
+    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(tipo)}`}>
+      {tipoLabel(tipo)}
+    </span>
+  );
+}
+
 function Salud() {
   const qc = useQueryClient();
   const animalesQ = useQuery({ queryKey: ["animals"], queryFn: listarAnimales });
   const recientesQ = useQuery({
     queryKey: ["health", "recent"],
-    queryFn: () => listarEventosRecientes(50),
+    queryFn: listarEventosRecientes,
   });
   const proximasQ = useQuery({
     queryKey: ["health", "upcoming"],
@@ -67,9 +76,13 @@ function Salud() {
   });
 
   const animalesActivos = useMemo(
-    () => (animalesQ.data ?? []).filter((a) => a.status === "activo" || a.status === "en_tratamiento"),
+    () =>
+      (animalesQ.data ?? []).filter((a) => a.status === "activo" || a.status === "en_tratamiento"),
     [animalesQ.data],
   );
+
+  const proximas = useMemo(() => proximasQ.data ?? [], [proximasQ.data]);
+  const tratamientos = useMemo(() => tratamientosQ.data ?? [], [tratamientosQ.data]);
 
   // ----- form state -----
   const [animalId, setAnimalId] = useState<string>("");
@@ -85,6 +98,7 @@ function Salud() {
   const [resuelto, setResuelto] = useState(true);
 
   function reset() {
+    setAnimalId("");
     setTitulo("");
     setDescripcion("");
     setMedicamento("");
@@ -95,7 +109,7 @@ function Salud() {
     setResuelto(true);
   }
 
-  const m = useMutation({
+  const mutation = useMutation({
     mutationFn: crearEvento,
     onSuccess: () => {
       toast.success("Evento médico registrado");
@@ -114,7 +128,10 @@ function Salud() {
     onError: (e: Error) => toast.error(`No se pudo actualizar: ${e.message}`),
   });
 
-  function submit(e: React.FormEvent) {
+  const requiereProxima = tipo === "vacuna" || tipo === "desparasitacion";
+  const requiereResuelto = tipo === "enfermedad" || tipo === "tratamiento" || tipo === "lesion";
+
+  function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!animalId) {
       toast.error("Seleccione un animal");
@@ -124,8 +141,8 @@ function Salud() {
       toast.error("Ingrese un título descriptivo");
       return;
     }
-    const requiereProxima = tipo === "vacuna" || tipo === "desparasitacion";
-    m.mutate({
+
+    mutation.mutate({
       animal_id: animalId,
       tipo,
       titulo: titulo.trim(),
@@ -140,20 +157,26 @@ function Salud() {
     });
   }
 
-  // KPIs
-  const totalProximas = (proximasQ.data ?? []).length;
-  const totalAtrasadas = (proximasQ.data ?? []).filter((p) => diasDesdeHoy(p.proxima_fecha!) < 0).length;
-  const totalTratamientos = (tratamientosQ.data ?? []).length;
-  const eventosEsteMes = useMemo(() => {
+  // KPIs — todos memoizados para consistencia
+  const kpis = useMemo(() => {
     const inicioMes = new Date();
     inicioMes.setDate(1);
-    return (recientesQ.data ?? []).filter((e) => new Date(e.fecha) >= inicioMes).length;
-  }, [recientesQ.data]);
+    return {
+      totalProximas: proximas.length,
+      totalAtrasadas: proximas.filter((p) => p.proxima_fecha && diasDesdeHoy(p.proxima_fecha) < 0)
+        .length,
+      totalTratamientos: tratamientos.length,
+      eventosEsteMes: (recientesQ.data ?? []).filter((e) => new Date(e.fecha) >= inicioMes).length,
+    };
+  }, [proximas, tratamientos, recientesQ.data]);
 
-  const historialPaged = usePaginated(recientesQ.data ?? []);
-
-  const requiereProxima = tipo === "vacuna" || tipo === "desparasitacion";
-  const requiereResuelto = tipo === "enfermedad" || tipo === "tratamiento" || tipo === "lesion";
+  const kpisLoading = proximasQ.isLoading || tratamientosQ.isLoading || recientesQ.isLoading;
+  const [mesFiltro, setMesFiltro] = useState(() => new Date().toISOString().slice(0, 7));
+  const historialFiltrado = useMemo(
+    () => (recientesQ.data ?? []).filter(e => e.fecha.startsWith(mesFiltro)),
+    [recientesQ.data, mesFiltro],
+  );
+  const historialPaged = usePaginated(historialFiltrado);
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -169,26 +192,30 @@ function Salud() {
         <KpiCard
           icon={<CalendarClock className="h-5 w-5" />}
           label="Próximas (60 días)"
-          value={totalProximas}
+          value={kpis.totalProximas}
           tone="primary"
+          isLoading={kpisLoading}
         />
         <KpiCard
           icon={<AlertTriangle className="h-5 w-5" />}
           label="Vacunas atrasadas"
-          value={totalAtrasadas}
-          tone={totalAtrasadas > 0 ? "danger" : "muted"}
+          value={kpis.totalAtrasadas}
+          tone={kpis.totalAtrasadas > 0 ? "danger" : "muted"}
+          isLoading={kpisLoading}
         />
         <KpiCard
           icon={<Activity className="h-5 w-5" />}
           label="Tratamientos activos"
-          value={totalTratamientos}
-          tone={totalTratamientos > 0 ? "warning" : "muted"}
+          value={kpis.totalTratamientos}
+          tone={kpis.totalTratamientos > 0 ? "warning" : "muted"}
+          isLoading={kpisLoading}
         />
         <KpiCard
           icon={<Stethoscope className="h-5 w-5" />}
           label="Eventos este mes"
-          value={eventosEsteMes}
+          value={kpis.eventosEsteMes}
           tone="muted"
+          isLoading={kpisLoading}
         />
       </div>
 
@@ -198,98 +225,118 @@ function Salud() {
           <h2 className="font-display text-xl mb-4 flex items-center gap-2">
             <Syringe className="h-5 w-5 text-primary" /> Registrar evento médico
           </h2>
-          <form onSubmit={submit} className="space-y-3">
-            <div>
-              <Label>Animal</Label>
-              <Select value={animalId} onValueChange={setAnimalId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar animal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {animalesActivos.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name ?? "Sin nombre"} ({a.tag_number})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Tipo de evento</Label>
-              <Select value={tipo} onValueChange={setTipo}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPOS_EVENTO.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Título</Label>
-              <Input
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                placeholder="Ej. Vacuna Aftosa, Mastitis, Visita rutinaria"
-                required
-              />
-            </div>
-
-            <div>
-              <Label>Descripción (opcional)</Label>
-              <Textarea
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-                rows={2}
-                placeholder="Detalles, observaciones, síntomas…"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+          {animalesQ.isError ? (
+            <p className="text-sm text-destructive">Error al cargar animales. Recarga la página.</p>
+          ) : (
+            <form onSubmit={submit} className="space-y-3">
               <div>
-                <Label>Medicamento</Label>
+                <Label>Animal</Label>
+                <Select value={animalId} onValueChange={setAnimalId} disabled={animalesQ.isLoading}>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={animalesQ.isLoading ? "Cargando…" : "Seleccionar animal"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {animalesActivos.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name ?? "Sin nombre"} ({a.tag_number})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Tipo de evento</Label>
+                <Select value={tipo} onValueChange={setTipo}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_EVENTO.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Título</Label>
                 <Input
-                  value={medicamento}
-                  onChange={(e) => setMedicamento(e.target.value)}
-                  placeholder="Ej. Ivermectina 1%"
+                  value={titulo}
+                  onChange={(e) => setTitulo(e.target.value)}
+                  placeholder="Ej. Vacuna Aftosa, Mastitis, Visita rutinaria"
+                  required
                 />
               </div>
-              <div>
-                <Label>Dosis</Label>
-                <Input
-                  value={dosis}
-                  onChange={(e) => setDosis(e.target.value)}
-                  placeholder="Ej. 5 ml IM"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Fecha</Label>
-                <Input
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  max={new Date().toISOString().slice(0, 10)}
+                <Label>Descripción (opcional)</Label>
+                <Textarea
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                  rows={2}
+                  placeholder="Detalles, observaciones, síntomas…"
                 />
               </div>
-              <div>
-                <Label>{requiereProxima ? "Próxima dosis" : "Costo (US$)"}</Label>
-                {requiereProxima ? (
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Medicamento</Label>
+                  <Input
+                    value={medicamento}
+                    onChange={(e) => setMedicamento(e.target.value)}
+                    placeholder="Ej. Ivermectina 1%"
+                  />
+                </div>
+                <div>
+                  <Label>Dosis</Label>
+                  <Input
+                    value={dosis}
+                    onChange={(e) => setDosis(e.target.value)}
+                    placeholder="Ej. 5 ml IM"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Fecha</Label>
                   <Input
                     type="date"
-                    value={proximaFecha}
-                    onChange={(e) => setProximaFecha(e.target.value)}
-                    min={fecha}
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    max={new Date().toISOString().slice(0, 10)}
                   />
-                ) : (
+                </div>
+                <div>
+                  <Label>{requiereProxima ? "Próxima dosis" : "Costo (US$)"}</Label>
+                  {requiereProxima ? (
+                    <Input
+                      type="date"
+                      value={proximaFecha}
+                      onChange={(e) => setProximaFecha(e.target.value)}
+                      min={fecha}
+                    />
+                  ) : (
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={costo}
+                      onChange={(e) => setCosto(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {requiereProxima && (
+                <div>
+                  <Label>Costo (US$)</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -298,57 +345,43 @@ function Salud() {
                     onChange={(e) => setCosto(e.target.value)}
                     placeholder="0.00"
                   />
-                )}
-              </div>
-            </div>
+                </div>
+              )}
 
-            {requiereProxima && (
               <div>
-                <Label>Costo (US$)</Label>
+                <Label>Veterinario</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={costo}
-                  onChange={(e) => setCosto(e.target.value)}
-                  placeholder="0.00"
+                  value={veterinario}
+                  onChange={(e) => setVeterinario(e.target.value)}
+                  placeholder="Nombre del profesional"
                 />
               </div>
-            )}
 
-            <div>
-              <Label>Veterinario</Label>
-              <Input
-                value={veterinario}
-                onChange={(e) => setVeterinario(e.target.value)}
-                placeholder="Nombre del profesional"
-              />
-            </div>
+              {requiereResuelto && (
+                <div className="flex items-center gap-2 rounded-lg border p-3 text-sm">
+                  <input
+                    id="resuelto"
+                    type="checkbox"
+                    checked={resuelto}
+                    onChange={(e) => setResuelto(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <label htmlFor="resuelto" className="cursor-pointer">
+                    Evento ya resuelto
+                  </label>
+                </div>
+              )}
 
-            {requiereResuelto && (
-              <div className="flex items-center gap-2 rounded-lg border p-3 text-sm">
-                <input
-                  id="resuelto"
-                  type="checkbox"
-                  checked={!resuelto}
-                  onChange={(e) => setResuelto(!e.target.checked)}
-                  className="h-4 w-4"
-                />
-                <label htmlFor="resuelto" className="cursor-pointer">
-                  Tratamiento aún en curso (no resuelto)
-                </label>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              variant="forest"
-              className="w-full"
-              disabled={m.isPending || animalesActivos.length === 0}
-            >
-              {m.isPending ? "Guardando…" : "Registrar evento"}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                variant="forest"
+                className="w-full"
+                disabled={mutation.isPending || animalesQ.isLoading || animalesActivos.length === 0}
+              >
+                {mutation.isPending ? "Guardando…" : "Registrar evento"}
+              </Button>
+            </form>
+          )}
         </Card>
 
         {/* Listas: próximas, tratamientos, historial */}
@@ -363,7 +396,9 @@ function Salud() {
             <TabsContent value="proximas">
               {proximasQ.isLoading ? (
                 <SkeletonRows />
-              ) : proximasQ.data?.length === 0 ? (
+              ) : proximasQ.isError ? (
+                <ErrorState text="Error al cargar vacunas próximas. Recarga la página." />
+              ) : proximas.length === 0 ? (
                 <EmptyState
                   icon={<CheckCircle2 className="h-7 w-7" />}
                   title="Todo al día"
@@ -380,10 +415,10 @@ function Salud() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(proximasQ.data ?? []).map((p) => {
-                      const dias = diasDesdeHoy(p.proxima_fecha!);
-                      const atrasada = dias < 0;
-                      const urgente = dias >= 0 && dias <= 7;
+                    {proximas.map((p) => {
+                      const dias = p.proxima_fecha ? diasDesdeHoy(p.proxima_fecha) : null;
+                      const atrasada = dias !== null && dias < 0;
+                      const urgente = dias !== null && dias >= 0 && dias <= 7;
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">
@@ -393,24 +428,25 @@ function Salud() {
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span
-                              className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(p.tipo)}`}
-                            >
-                              {tipoLabel(p.tipo)}
-                            </span>{" "}
-                            {p.titulo}
+                            <TipoBadge tipo={p.tipo} /> {p.titulo}
                           </TableCell>
-                          <TableCell>{p.proxima_fecha}</TableCell>
+                          <TableCell>{formatFecha(p.proxima_fecha)}</TableCell>
                           <TableCell className="text-right">
-                            <Badge
-                              variant={atrasada ? "destructive" : urgente ? "default" : "secondary"}
-                            >
-                              {atrasada
-                                ? `Atrasada ${Math.abs(dias)}d`
-                                : dias === 0
-                                  ? "Hoy"
-                                  : `En ${dias}d`}
-                            </Badge>
+                            {dias === null ? (
+                              <Badge variant="secondary">—</Badge>
+                            ) : (
+                              <Badge
+                                variant={
+                                  atrasada ? "destructive" : urgente ? "default" : "secondary"
+                                }
+                              >
+                                {atrasada
+                                  ? `Atrasada ${Math.abs(dias)}d`
+                                  : dias === 0
+                                    ? "Hoy"
+                                    : `En ${dias}d`}
+                              </Badge>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -423,7 +459,9 @@ function Salud() {
             <TabsContent value="activos">
               {tratamientosQ.isLoading ? (
                 <SkeletonRows />
-              ) : tratamientosQ.data?.length === 0 ? (
+              ) : tratamientosQ.isError ? (
+                <ErrorState text="Error al cargar tratamientos. Recarga la página." />
+              ) : tratamientos.length === 0 ? (
                 <EmptyState
                   icon={<CheckCircle2 className="h-7 w-7" />}
                   title="Sin tratamientos activos"
@@ -441,7 +479,7 @@ function Salud() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(tratamientosQ.data ?? []).map((t) => (
+                    {tratamientos.map((t) => (
                       <TableRow key={t.id}>
                         <TableCell className="font-medium">
                           {t.animals?.name ?? "—"}{" "}
@@ -450,14 +488,10 @@ function Salud() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span
-                            className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(t.tipo)}`}
-                          >
-                            {tipoLabel(t.tipo)}
-                          </span>
+                          <TipoBadge tipo={t.tipo} />
                         </TableCell>
                         <TableCell className="max-w-xs truncate">{t.titulo}</TableCell>
-                        <TableCell>{t.fecha}</TableCell>
+                        <TableCell>{formatFecha(t.fecha)}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             size="sm"
@@ -476,9 +510,19 @@ function Salud() {
             </TabsContent>
 
             <TabsContent value="historial">
+              <div className="flex items-center justify-end mb-3">
+                <Select value={mesFiltro} onValueChange={setMesFiltro}>
+                  <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {getMesesRecientes().map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               {recientesQ.isLoading ? (
                 <SkeletonRows />
-              ) : recientesQ.data?.length === 0 ? (
+              ) : recientesQ.isError ? (
+                <ErrorState text="Error al cargar el historial. Recarga la página." />
+              ) : historialFiltrado.length === 0 ? (
                 <EmptyState
                   icon={<Stethoscope className="h-7 w-7" />}
                   title="Sin eventos registrados"
@@ -499,7 +543,7 @@ function Salud() {
                     <TableBody>
                       {historialPaged.items.map((e) => (
                         <TableRow key={e.id}>
-                          <TableCell>{e.fecha}</TableCell>
+                          <TableCell>{formatFecha(e.fecha)}</TableCell>
                           <TableCell className="font-medium">
                             {e.animals?.name ?? "—"}{" "}
                             <span className="text-muted-foreground text-xs">
@@ -507,11 +551,7 @@ function Salud() {
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span
-                              className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tipoColor(e.tipo)}`}
-                            >
-                              {tipoLabel(e.tipo)}
-                            </span>
+                            <TipoBadge tipo={e.tipo} />
                           </TableCell>
                           <TableCell className="max-w-xs truncate">{e.titulo}</TableCell>
                           <TableCell className="text-right text-muted-foreground">
@@ -521,7 +561,11 @@ function Salud() {
                       ))}
                     </TableBody>
                   </Table>
-                  <Pager page={historialPaged.page} total={historialPaged.totalPages} onChange={historialPaged.setPage} />
+                  <Pager
+                    page={historialPaged.page}
+                    total={historialPaged.totalPages}
+                    onChange={historialPaged.setPage}
+                  />
                 </div>
               )}
             </TabsContent>
@@ -537,11 +581,13 @@ function KpiCard({
   label,
   value,
   tone,
+  isLoading,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   tone: "primary" | "danger" | "warning" | "muted";
+  isLoading?: boolean;
 }) {
   const toneClass = {
     primary: "bg-primary/10 text-primary",
@@ -557,7 +603,11 @@ function KpiCard({
         </div>
         <div>
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="font-display text-2xl">{value}</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-12 mt-1" />
+          ) : (
+            <p className="font-display text-2xl">{value}</p>
+          )}
         </div>
       </div>
     </Card>
@@ -572,6 +622,10 @@ function SkeletonRows() {
       ))}
     </div>
   );
+}
+
+function ErrorState({ text }: { text: string }) {
+  return <p className="text-center py-8 text-sm text-destructive">{text}</p>;
 }
 
 function EmptyState({

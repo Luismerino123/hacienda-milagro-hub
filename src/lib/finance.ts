@@ -43,13 +43,12 @@ export async function crearCliente(input: ClientInsert) {
 }
 
 // ----- Ventas -----
-export async function listarVentas(limit = 100) {
+export async function listarVentas() {
   const { data, error } = await supabase
     .from("sales")
     .select("*, clients(nombre), animals(name, tag_number)")
     .order("fecha", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -66,13 +65,12 @@ export async function eliminarVenta(id: string) {
 }
 
 // ----- Egresos -----
-export async function listarEgresos(limit = 100) {
+export async function listarEgresos() {
   const { data, error } = await supabase
     .from("expenses")
     .select("*")
     .order("fecha", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }

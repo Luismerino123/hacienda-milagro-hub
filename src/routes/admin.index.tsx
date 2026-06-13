@@ -79,13 +79,17 @@ function Dashboard() {
 
   // Alertas urgentes (atrasadas + esta semana + tratamientos activos + partos en 14 días)
   const alertasUrgentes = useMemo(() => {
-    const atrasadas = (vacunasQ.data ?? []).filter(v => diasDesdeHoy(v.proxima_fecha!) < 0).length;
-    const semana = (vacunasQ.data ?? []).filter(v => {
-      const d = diasDesdeHoy(v.proxima_fecha!);
+    const atrasadas = (vacunasQ.data ?? []).filter(
+      (v) => v.proxima_fecha && diasDesdeHoy(v.proxima_fecha) < 0,
+    ).length;
+    const semana = (vacunasQ.data ?? []).filter((v) => {
+      if (!v.proxima_fecha) return false;
+      const d = diasDesdeHoy(v.proxima_fecha);
       return d >= 0 && d <= 7;
     }).length;
-    const partos = (prenadasQ.data ?? []).filter(p => {
-      const d = diasDesdeHoy(p.fecha_estimada_parto!);
+    const partos = (prenadasQ.data ?? []).filter((p) => {
+      if (!p.fecha_estimada_parto) return false;
+      const d = diasDesdeHoy(p.fecha_estimada_parto);
       return d >= -7 && d <= 14;
     }).length;
     const trat = tratamientosQ.data?.length ?? 0;

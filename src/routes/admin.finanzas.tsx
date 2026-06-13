@@ -45,6 +45,7 @@ import { usePaginated } from "@/lib/usePagination";
 import { Pager } from "@/components/ui/pager";
 import { toast } from "sonner";
 import { listarAnimales } from "@/lib/animals";
+import { formatFecha, getMesesRecientes } from "@/lib/utils";
 import {
   CATEGORIAS_EGRESO,
   TIPOS_VENTA,
@@ -59,29 +60,53 @@ import {
 
 export const Route = createFileRoute("/admin/finanzas")({ component: Finanzas });
 
+
 function Finanzas() {
   const qc = useQueryClient();
-  const ventasQ = useQuery({ queryKey: ["sales"], queryFn: () => listarVentas(100) });
-  const egresosQ = useQuery({ queryKey: ["expenses"], queryFn: () => listarEgresos(100) });
+  const ventasQ = useQuery({ queryKey: ["sales"], queryFn: listarVentas });
+  const egresosQ = useQuery({ queryKey: ["expenses"], queryFn: listarEgresos });
   const clientesQ = useQuery({ queryKey: ["clients"], queryFn: listarClientes });
   const animalesQ = useQuery({ queryKey: ["animals"], queryFn: listarAnimales });
-  const resumenQ = useQuery({ queryKey: ["finance", "summary", 6], queryFn: () => resumenMensual(6) });
+  const resumenQ = useQuery({
+    queryKey: ["finance", "summary", 6],
+    queryFn: () => resumenMensual(6),
+  });
 
-  const ventasPaged = usePaginated(ventasQ.data ?? []);
-  const egresosPaged = usePaginated(egresosQ.data ?? []);
+  const [mesVentas, setMesVentas] = useState(() => new Date().toISOString().slice(0, 7));
+  const [mesEgresos, setMesEgresos] = useState(() => new Date().toISOString().slice(0, 7));
+  const ventasFiltradas = useMemo(
+    () => (ventasQ.data ?? []).filter(v => v.fecha.startsWith(mesVentas)),
+    [ventasQ.data, mesVentas],
+  );
+  const egresosFiltrados = useMemo(
+    () => (egresosQ.data ?? []).filter(e => e.fecha.startsWith(mesEgresos)),
+    [egresosQ.data, mesEgresos],
+  );
+  const ventasPaged = usePaginated(ventasFiltradas);
+  const egresosPaged = usePaginated(egresosFiltrados);
   const clientesPaged = usePaginated(clientesQ.data ?? []);
+
+  const totalClientes = clientesQ.data?.length ?? 0;
 
   // KPIs (mes actual)
   const mesActual = new Date().toISOString().slice(0, 7);
   const ingresosMes = useMemo(
-    () => (ventasQ.data ?? []).filter((v) => v.fecha.startsWith(mesActual)).reduce((s, v) => s + Number(v.total), 0),
+    () =>
+      (ventasQ.data ?? [])
+        .filter((v) => v.fecha.startsWith(mesActual))
+        .reduce((s, v) => s + Number(v.total), 0),
     [ventasQ.data, mesActual],
   );
   const egresosMes = useMemo(
-    () => (egresosQ.data ?? []).filter((e) => e.fecha.startsWith(mesActual)).reduce((s, e) => s + Number(e.monto), 0),
+    () =>
+      (egresosQ.data ?? [])
+        .filter((e) => e.fecha.startsWith(mesActual))
+        .reduce((s, e) => s + Number(e.monto), 0),
     [egresosQ.data, mesActual],
   );
   const netoMes = ingresosMes - egresosMes;
+
+  const kpisLoading = ventasQ.isLoading || egresosQ.isLoading;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -94,10 +119,34 @@ function Finanzas() {
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={<ArrowUpCircle className="h-5 w-5" />} label="Ingresos este mes" value={`$${ingresosMes.toFixed(2)}`} tone="primary" />
-        <KpiCard icon={<ArrowDownCircle className="h-5 w-5" />} label="Egresos este mes" value={`$${egresosMes.toFixed(2)}`} tone="danger" />
-        <KpiCard icon={<TrendingUp className="h-5 w-5" />} label="Neto este mes" value={`$${netoMes.toFixed(2)}`} tone={netoMes >= 0 ? "success" : "danger"} />
-        <KpiCard icon={<DollarSign className="h-5 w-5" />} label="Clientes activos" value={(clientesQ.data ?? []).length.toString()} tone="muted" />
+        <KpiCard
+          icon={<ArrowUpCircle className="h-5 w-5" />}
+          label="Ingresos este mes"
+          value={`$${ingresosMes.toFixed(2)}`}
+          tone="primary"
+          isLoading={kpisLoading}
+        />
+        <KpiCard
+          icon={<ArrowDownCircle className="h-5 w-5" />}
+          label="Egresos este mes"
+          value={`$${egresosMes.toFixed(2)}`}
+          tone="danger"
+          isLoading={kpisLoading}
+        />
+        <KpiCard
+          icon={<TrendingUp className="h-5 w-5" />}
+          label="Neto este mes"
+          value={`$${netoMes.toFixed(2)}`}
+          tone={netoMes >= 0 ? "success" : "danger"}
+          isLoading={kpisLoading}
+        />
+        <KpiCard
+          icon={<DollarSign className="h-5 w-5" />}
+          label="Clientes activos"
+          value={totalClientes.toString()}
+          tone="muted"
+          isLoading={clientesQ.isLoading}
+        />
       </div>
 
       {/* Gráfico mensual */}
@@ -106,6 +155,10 @@ function Finanzas() {
         <div className="h-64">
           {resumenQ.isLoading ? (
             <Skeleton className="h-full w-full" />
+          ) : resumenQ.isError ? (
+            <p className="text-sm text-destructive text-center pt-8">
+              Error al cargar el resumen.
+            </p>
           ) : (
             <ResponsiveContainer>
               <BarChart data={resumenQ.data ?? []}>
@@ -121,8 +174,18 @@ function Finanzas() {
                   formatter={(v: number) => `$${v.toFixed(2)}`}
                 />
                 <Legend />
-                <Bar dataKey="ingresos" fill="var(--color-chart-1)" name="Ingresos" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="egresos" fill="var(--color-chart-2)" name="Egresos" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="ingresos"
+                  fill="var(--color-chart-1)"
+                  name="Ingresos"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="egresos"
+                  fill="var(--color-chart-2)"
+                  name="Egresos"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -137,14 +200,28 @@ function Finanzas() {
         </TabsList>
 
         <TabsContent value="ventas" className="mt-4">
-          <FormVenta clientes={clientesQ.data ?? []} animales={animalesQ.data ?? []} onSaved={() => qc.invalidateQueries({ queryKey: ["sales"] })} />
+          <FormVenta
+            clientes={clientesQ.data ?? []}
+            animales={animalesQ.data ?? []}
+            isLoadingClientes={clientesQ.isLoading}
+            isLoadingAnimales={animalesQ.isLoading}
+            onSaved={() => qc.invalidateQueries({ queryKey: ["sales"] })}
+          />
           <Card className="mt-6 shadow-soft overflow-hidden">
-            <div className="p-5 border-b">
-              <h2 className="font-display text-xl">Historial de ventas</h2>
+            <div className="p-5 border-b flex items-center gap-3">
+              <h2 className="font-display text-xl flex-1">Historial de ventas</h2>
+              <Select value={mesVentas} onValueChange={setMesVentas}>
+                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {getMesesRecientes().map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             {ventasQ.isLoading ? (
               <SkeletonRows />
-            ) : ventasQ.data?.length === 0 ? (
+            ) : ventasQ.isError ? (
+              <ErrorState text="Error al cargar las ventas. Recarga la página." />
+            ) : ventasFiltradas.length === 0 ? (
               <EmptyState text="Aún no se han registrado ventas." />
             ) : (
               <div>
@@ -161,8 +238,12 @@ function Finanzas() {
                   <TableBody>
                     {ventasPaged.items.map((v) => (
                       <TableRow key={v.id}>
-                        <TableCell>{v.fecha}</TableCell>
-                        <TableCell><Badge variant="secondary" className="capitalize">{v.tipo}</Badge></TableCell>
+                        <TableCell>{formatFecha(v.fecha)}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="capitalize">
+                            {v.tipo}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <div className="font-medium">{v.clients?.nombre ?? "—"}</div>
                           <div className="text-xs text-muted-foreground">
@@ -173,12 +254,18 @@ function Finanzas() {
                         <TableCell className="text-sm">
                           {v.cantidad ? `${v.cantidad} ${v.unidad ?? ""}` : "—"}
                         </TableCell>
-                        <TableCell className="text-right font-semibold">${Number(v.total).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          ${Number(v.total).toFixed(2)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-                <Pager page={ventasPaged.page} total={ventasPaged.totalPages} onChange={ventasPaged.setPage} />
+                <Pager
+                  page={ventasPaged.page}
+                  total={ventasPaged.totalPages}
+                  onChange={ventasPaged.setPage}
+                />
               </div>
             )}
           </Card>
@@ -187,12 +274,20 @@ function Finanzas() {
         <TabsContent value="egresos" className="mt-4">
           <FormEgreso onSaved={() => qc.invalidateQueries({ queryKey: ["expenses"] })} />
           <Card className="mt-6 shadow-soft overflow-hidden">
-            <div className="p-5 border-b">
-              <h2 className="font-display text-xl">Historial de egresos</h2>
+            <div className="p-5 border-b flex items-center gap-3">
+              <h2 className="font-display text-xl flex-1">Historial de egresos</h2>
+              <Select value={mesEgresos} onValueChange={setMesEgresos}>
+                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {getMesesRecientes().map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             {egresosQ.isLoading ? (
               <SkeletonRows />
-            ) : egresosQ.data?.length === 0 ? (
+            ) : egresosQ.isError ? (
+              <ErrorState text="Error al cargar los egresos. Recarga la página." />
+            ) : egresosFiltrados.length === 0 ? (
               <EmptyState text="Aún no se han registrado egresos." />
             ) : (
               <div>
@@ -209,10 +304,14 @@ function Finanzas() {
                   <TableBody>
                     {egresosPaged.items.map((e) => (
                       <TableRow key={e.id}>
-                        <TableCell>{e.fecha}</TableCell>
-                        <TableCell><Badge variant="secondary">{categoriaLabel(e.categoria)}</Badge></TableCell>
+                        <TableCell>{formatFecha(e.fecha)}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{categoriaLabel(e.categoria)}</Badge>
+                        </TableCell>
                         <TableCell className="max-w-xs">{e.descripcion}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{e.proveedor ?? "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {e.proveedor ?? "—"}
+                        </TableCell>
                         <TableCell className="text-right font-semibold text-destructive">
                           -${Number(e.monto).toFixed(2)}
                         </TableCell>
@@ -220,7 +319,11 @@ function Finanzas() {
                     ))}
                   </TableBody>
                 </Table>
-                <Pager page={egresosPaged.page} total={egresosPaged.totalPages} onChange={egresosPaged.setPage} />
+                <Pager
+                  page={egresosPaged.page}
+                  total={egresosPaged.totalPages}
+                  onChange={egresosPaged.setPage}
+                />
               </div>
             )}
           </Card>
@@ -236,6 +339,8 @@ function Finanzas() {
             </div>
             {clientesQ.isLoading ? (
               <SkeletonRows />
+            ) : clientesQ.isError ? (
+              <ErrorState text="Error al cargar clientes. Recarga la página." />
             ) : clientesQ.data?.length === 0 ? (
               <EmptyState text="Aún no hay clientes registrados." />
             ) : (
@@ -255,12 +360,18 @@ function Finanzas() {
                         <TableCell className="font-medium">{c.nombre}</TableCell>
                         <TableCell>{c.telefono ?? "—"}</TableCell>
                         <TableCell>{c.email ?? "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{c.direccion ?? "—"}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {c.direccion ?? "—"}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-                <Pager page={clientesPaged.page} total={clientesPaged.totalPages} onChange={clientesPaged.setPage} />
+                <Pager
+                  page={clientesPaged.page}
+                  total={clientesPaged.totalPages}
+                  onChange={clientesPaged.setPage}
+                />
               </div>
             )}
           </Card>
@@ -273,10 +384,14 @@ function Finanzas() {
 function FormVenta({
   clientes,
   animales,
+  isLoadingClientes,
+  isLoadingAnimales,
   onSaved,
 }: {
   clientes: Array<{ id: string; nombre: string }>;
   animales: Array<{ id: string; name: string | null; tag_number: string }>;
+  isLoadingClientes: boolean;
+  isLoadingAnimales: boolean;
   onSaved: () => void;
 }) {
   const [tipo, setTipo] = useState("leche");
@@ -290,22 +405,27 @@ function FormVenta({
   const total = (Number(cantidad) || 0) * (Number(precio) || 0);
   const unidad = tipo === "leche" ? "L" : tipo === "ganado" ? "cabeza" : "";
 
-  const m = useMutation({
+  const mutation = useMutation({
     mutationFn: crearVenta,
     onSuccess: () => {
       toast.success("Venta registrada");
-      setCantidad(""); setPrecio(""); setDescripcion("");
+      setCantidad("");
+      setPrecio("");
+      setDescripcion("");
       onSaved();
     },
     onError: (e: Error) => toast.error(`No se pudo guardar: ${e.message}`),
   });
 
-  function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const cant = Number(cantidad);
     const pre = Number(precio);
-    if (!cant || !pre) { toast.error("Ingrese cantidad y precio"); return; }
-    m.mutate({
+    if (!cant || !pre) {
+      toast.error("Ingrese cantidad y precio");
+      return;
+    }
+    mutation.mutate({
       tipo,
       fecha,
       client_id: clientId || null,
@@ -327,30 +447,49 @@ function FormVenta({
         <div>
           <Label>Tipo</Label>
           <Select value={tipo} onValueChange={setTipo}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {TIPOS_VENTA.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+              {TIPOS_VENTA.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label>Fecha</Label>
-          <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} max={new Date().toISOString().slice(0, 10)} />
+          <Input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            max={new Date().toISOString().slice(0, 10)}
+          />
         </div>
         <div>
           <Label>Cliente</Label>
-          <Select value={clientId} onValueChange={setClientId}>
-            <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+          <Select value={clientId} onValueChange={setClientId} disabled={isLoadingClientes}>
+            <SelectTrigger>
+              <SelectValue placeholder={isLoadingClientes ? "Cargando…" : "Opcional"} />
+            </SelectTrigger>
             <SelectContent>
-              {clientes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
+              {clientes.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nombre}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         {tipo === "ganado" && (
           <div>
             <Label>Animal vendido</Label>
-            <Select value={animalId} onValueChange={setAnimalId}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+            <Select value={animalId} onValueChange={setAnimalId} disabled={isLoadingAnimales}>
+              <SelectTrigger>
+                <SelectValue placeholder={isLoadingAnimales ? "Cargando…" : "Seleccionar"} />
+              </SelectTrigger>
               <SelectContent>
                 {animales.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
@@ -363,11 +502,27 @@ function FormVenta({
         )}
         <div>
           <Label>Cantidad {unidad && `(${unidad})`}</Label>
-          <Input type="number" step="0.01" min="0" value={cantidad} onChange={(e) => setCantidad(e.target.value)} placeholder="0" required />
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={cantidad}
+            onChange={(e) => setCantidad(e.target.value)}
+            placeholder="0"
+            required
+          />
         </div>
         <div>
           <Label>Precio unitario (US$)</Label>
-          <Input type="number" step="0.01" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="0.00" required />
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={precio}
+            onChange={(e) => setPrecio(e.target.value)}
+            placeholder="0.00"
+            required
+          />
         </div>
         <div>
           <Label>Total calculado</Label>
@@ -375,11 +530,20 @@ function FormVenta({
         </div>
         <div className="sm:col-span-2 lg:col-span-4">
           <Label>Descripción (opcional)</Label>
-          <Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Detalles adicionales" />
+          <Input
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Detalles adicionales"
+          />
         </div>
         <div className="sm:col-span-2 lg:col-span-4">
-          <Button type="submit" variant="forest" disabled={m.isPending} className="w-full sm:w-auto">
-            {m.isPending ? "Guardando…" : "Registrar venta"}
+          <Button
+            type="submit"
+            variant="forest"
+            disabled={mutation.isPending}
+            className="w-full sm:w-auto"
+          >
+            {mutation.isPending ? "Guardando…" : "Registrar venta"}
           </Button>
         </div>
       </form>
@@ -394,21 +558,29 @@ function FormEgreso({ onSaved }: { onSaved: () => void }) {
   const [descripcion, setDescripcion] = useState("");
   const [proveedor, setProveedor] = useState("");
 
-  const m = useMutation({
+  const mutation = useMutation({
     mutationFn: crearEgreso,
     onSuccess: () => {
       toast.success("Egreso registrado");
-      setMonto(""); setDescripcion(""); setProveedor("");
+      setMonto("");
+      setDescripcion("");
+      setProveedor("");
       onSaved();
     },
     onError: (e: Error) => toast.error(`No se pudo guardar: ${e.message}`),
   });
 
-  function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!Number(monto)) { toast.error("Ingrese un monto"); return; }
-    if (!descripcion.trim()) { toast.error("Ingrese una descripción"); return; }
-    m.mutate({
+    if (!Number(monto)) {
+      toast.error("Ingrese un monto");
+      return;
+    }
+    if (!descripcion.trim()) {
+      toast.error("Ingrese una descripción");
+      return;
+    }
+    mutation.mutate({
       categoria,
       fecha,
       monto: Number(monto),
@@ -426,31 +598,65 @@ function FormEgreso({ onSaved }: { onSaved: () => void }) {
         <div>
           <Label>Categoría</Label>
           <Select value={categoria} onValueChange={setCategoria}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {CATEGORIAS_EGRESO.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              {CATEGORIAS_EGRESO.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label>Fecha</Label>
-          <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} max={new Date().toISOString().slice(0, 10)} />
+          <Input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            max={new Date().toISOString().slice(0, 10)}
+          />
         </div>
         <div>
           <Label>Monto (US$)</Label>
-          <Input type="number" step="0.01" min="0" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0.00" required />
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            placeholder="0.00"
+            required
+          />
         </div>
         <div>
           <Label>Proveedor (opcional)</Label>
-          <Input value={proveedor} onChange={(e) => setProveedor(e.target.value)} placeholder="Nombre del proveedor" />
+          <Input
+            value={proveedor}
+            onChange={(e) => setProveedor(e.target.value)}
+            placeholder="Nombre del proveedor"
+          />
         </div>
         <div className="sm:col-span-2 lg:col-span-4">
           <Label>Descripción</Label>
-          <Textarea rows={2} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Qué se compró o pagó" required />
+          <Textarea
+            rows={2}
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Qué se compró o pagó"
+            required
+          />
         </div>
         <div className="sm:col-span-2 lg:col-span-4">
-          <Button type="submit" variant="forest" disabled={m.isPending} className="w-full sm:w-auto">
-            {m.isPending ? "Guardando…" : "Registrar egreso"}
+          <Button
+            type="submit"
+            variant="forest"
+            disabled={mutation.isPending}
+            className="w-full sm:w-auto"
+          >
+            {mutation.isPending ? "Guardando…" : "Registrar egreso"}
           </Button>
         </div>
       </form>
@@ -463,11 +669,13 @@ function KpiCard({
   label,
   value,
   tone,
+  isLoading,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   tone: "primary" | "danger" | "success" | "muted";
+  isLoading?: boolean;
 }) {
   const toneClass = {
     primary: "bg-primary/10 text-primary",
@@ -478,10 +686,16 @@ function KpiCard({
   return (
     <Card className="p-4 shadow-soft">
       <div className="flex items-center gap-3">
-        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${toneClass}`}>{icon}</div>
+        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${toneClass}`}>
+          {icon}
+        </div>
         <div>
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="font-display text-xl">{value}</p>
+          {isLoading ? (
+            <Skeleton className="h-7 w-20 mt-1" />
+          ) : (
+            <p className="font-display text-xl">{value}</p>
+          )}
         </div>
       </div>
     </Card>
@@ -491,9 +705,15 @@ function KpiCard({
 function SkeletonRows() {
   return (
     <div className="p-5 space-y-2">
-      {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
     </div>
   );
+}
+
+function ErrorState({ text }: { text: string }) {
+  return <p className="p-8 text-center text-sm text-destructive">{text}</p>;
 }
 
 function EmptyState({ text }: { text: string }) {

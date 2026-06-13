@@ -35,18 +35,17 @@ export function estimarParto(fechaMonta: string): string {
 }
 
 /** Eventos reproductivos recientes (con info de animal/toro/ternero). */
-export async function listarEventosReproRecientes(limit = 50) {
+export async function listarEventosReproRecientes() {
   const { data, error } = await supabase
     .from("reproduction_events")
     .select(`
       *,
       animals:animal_id(name, tag_number, sex),
-      toro:toro_id(name, tag_number),
-      ternero:ternero_id(name, tag_number)
+      toro:animals!toro_id(name, tag_number),
+      ternero:animals!ternero_id(name, tag_number)
     `)
     .order("fecha", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }
